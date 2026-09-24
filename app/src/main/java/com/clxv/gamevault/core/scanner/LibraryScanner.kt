@@ -184,6 +184,7 @@ class LibraryScanner @Inject constructor(
                 quickHash = hash,
             ))
         }
+        return true
     }
 
     /** Copies matching sidecar art into the game's private cover slot. */
