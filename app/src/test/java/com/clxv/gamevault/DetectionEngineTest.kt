@@ -92,7 +92,7 @@ class DetectionEngineTest {
     }
 
     @Test fun `Xbox XDVDFS string detected`() {
-        val d = detect(buf {
+        val d = detect(buf(size = 0x40000, init = {
             it[0x8000] = 0x01; put(it, 0x8001, "CD001")
             put(it, 0x20000, "MICROSOFT*XBOX*MEDIA")
         }, "halo.iso", 2_000_000_000L)
