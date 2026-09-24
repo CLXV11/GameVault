@@ -98,4 +98,5 @@
     <string name="clean_unknown">Eliminar entradas desconocidas</string>
     <string name="clean_unknown_confirm">Se eliminarán todos los juegos cuya plataforma no se pudo identificar. Los archivos no se tocan.</string>
     <string name="auto_organize">Organizar automáticamente por plataforma</string>
+    <string name="not_a_game_file">Este archivo no parece un juego: elige el archivo del juego (rvz, iso, wbfs…). Pon la portada junto a él como "Juego.cover.png" para vincularla automáticamente.</string>
 </resources>

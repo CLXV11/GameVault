@@ -38,6 +38,7 @@ class LibraryScanner @Inject constructor(
     @ApplicationContext private val context: Context,
     private val db: AppDatabase,
     private val saf: com.clxv.gamevault.core.saf.SafManager,
+    private val coverManager: com.clxv.gamevault.core.covers.CoverManager,
 ) {
     private val _progress = MutableStateFlow(ScanProgress())
     val progress: StateFlow<ScanProgress> = _progress.asStateFlow()
@@ -46,19 +47,8 @@ class LibraryScanner @Inject constructor(
 
     fun cancel() { cancelled = true }
 
-    /** Non-game content the scanner must never turn into library entries. */
-    private val JUNK_EXTENSIONS = setOf(
-        // images
-        "jpg", "jpeg", "png", "gif", "webp", "bmp", "heic", "tif", "tiff", "svg",
-        // video / audio
-        "mp4", "mkv", "avi", "mov", "webm", "3gp", "mp3", "flac", "ogg", "wav", "m4a",
-        // documents / books
-        "pdf", "txt", "doc", "docx", "epub", "cbz", "cbr",
-        // scripts / programs / packages
-        "py", "sh", "js", "ts", "html", "css", "json", "exe", "msi", "apk", "jar",
-        // archives that are not game containers
-        "7z", "rar",
-    )
+    private val JUNK_EXTENSIONS = DetectionEngine.JUNK_EXTENSIONS
+    private val COVER_REGEX = DetectionEngine.COVER_NAME_REGEX
 
     /** Extensions that identify game content even when the platform stays unknown. */
     private val GAME_EXTENSIONS = setOf(
@@ -106,7 +96,8 @@ class LibraryScanner @Inject constructor(
             }
 
             val foundUris = mutableSetOf<String>()
-            walk(tree, root, 0, foundUris) { file ->
+            val coverSidecars = mutableMapOf<String, Uri>()   // normalized base -> uri
+            walk(tree, root, 0, foundUris, coverSidecars) { file ->
                 seen++
                 _progress.value = _progress.value.copy(
                     filesScanned = seen,
@@ -117,6 +108,9 @@ class LibraryScanner @Inject constructor(
                 if (result == ProcessResult.ADDED) added++
                 if (result == ProcessResult.UPDATED) updated++
             }
+
+            // Attach user cover art: "Game (USA).cover.png" -> cover of "Game (USA).rvz"
+            pairCoverSidecars(coverSidecars)
 
             // Broken/missing file detection: any DB record under this root that no
             // longer resolves on disk is flagged, not silently deleted.
@@ -142,8 +136,11 @@ class LibraryScanner @Inject constructor(
 
     private enum class ProcessResult { ADDED, UPDATED, SKIPPED }
 
-    /** Manually add one user-picked file to the library ("manual" pseudo-root). */
-    suspend fun addSingleFile(uri: Uri, title: String, platform: com.clxv.gamevault.core.model.Platform?) {
+    /** Manually add one user-picked file to the library ("manual" pseudo-root).
+     *  Returns false when the file is clearly not a game. */
+    suspend fun addSingleFile(uri: Uri, title: String, platform: com.clxv.gamevault.core.model.Platform?): Boolean {
+        val nm = queryDisplayName(uri) ?: uri.lastPathSegment ?: "file"
+        if (nm.substringAfterLast('.', "").lowercase(java.util.Locale.US) in JUNK_EXTENSIONS) return false
         withContext(Dispatchers.IO) {
             val name = queryDisplayName(uri) ?: uri.lastPathSegment ?: "file"
             var size = 0L; var mtime = 0L
@@ -186,6 +183,22 @@ class LibraryScanner @Inject constructor(
                 detectionReasons = det.reasons.take(8).joinToString("\n"),
                 quickHash = hash,
             ))
+        }
+    }
+
+    /** Copies matching sidecar art into the game's private cover slot. */
+    private suspend fun pairCoverSidecars(covers: Map<String, Uri>) {
+        if (covers.isEmpty()) return
+        val games = db.gameDao().allGamesSnapshot()
+        val byNorm = games.associateBy { it.normalizedTitle }
+        covers.forEach { (base, uri) ->
+            val game = byNorm[base]
+                ?: games.firstOrNull { base.startsWith(it.normalizedTitle) || it.normalizedTitle.startsWith(base) }
+                ?: return@forEach
+            if (game.customCoverPath != null) return@forEach   // never overwrite user art
+            val bmp = coverManager.decodeSampled(uri) ?: return@forEach
+            val path = coverManager.saveCustomCover(game.id, bmp)
+            db.gameDao().upsertGame(game.copy(customCoverPath = path))
         }
     }
 
@@ -291,6 +304,7 @@ class LibraryScanner @Inject constructor(
         root: LibraryRootEntity,
         depth: Int,
         foundUris: MutableSet<String>,
+        coverSidecars: MutableMap<String, Uri>,
         onFile: suspend (DocumentFile) -> Unit,
     ) {
         if (cancelled) throw CancellationException("scan cancelled")
@@ -301,10 +315,20 @@ class LibraryScanner @Inject constructor(
             val nm = child.name?.lowercase(Locale.US) ?: continue
             if (child.isDirectory) {
                 if (nm in SKIPPED_DIRS || nm.startsWith(".")) continue
-                walk(child, root, depth + 1, foundUris, onFile)
+                walk(child, root, depth + 1, foundUris, coverSidecars, onFile)
             } else if (child.isFile) {
                 if (nm.startsWith(".")) continue
                 foundUris.add(child.uri.toString())
+                // Cover-art sidecar? "Game (USA).cover.png" — never a game itself.
+                val ext = nm.substringAfterLast('.', "")
+                if (ext in DetectionEngine.IMAGE_EXTENSIONS &&
+                    COVER_REGEX.containsMatchIn(nm.substringBeforeLast('.'))) {
+                    val base = nm.substringBeforeLast('.').replace(COVER_REGEX, "")
+                    val norm = DetectionEngine().normalizeTitle("$base.x")
+                        .lowercase(java.util.Locale.US)
+                    coverSidecars[norm] = child.uri
+                    continue
+                }
                 onFile(child)
             }
         }

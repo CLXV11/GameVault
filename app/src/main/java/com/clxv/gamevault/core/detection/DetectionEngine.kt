@@ -34,6 +34,38 @@ class DetectionEngine(private val reader: ByteReader? = null) {
     companion object {
         const val MAX_SNIFF_BYTES = 8 * 1024 * 1024L   // never scan more than the first 8 MiB
         const val MIN_DISC_SIZE = 32 * 1024L           // below this a "disc image" is corrupt
+
+        /** Non-game content that must never become a library entry. */
+        val JUNK_EXTENSIONS = setOf(
+            "jpg", "jpeg", "png", "gif", "webp", "bmp", "heic", "tif", "tiff", "svg",
+            "mp4", "mkv", "avi", "mov", "webm", "3gp", "mp3", "flac", "ogg", "wav", "m4a",
+            "pdf", "txt", "doc", "docx", "epub", "cbz", "cbr",
+            "py", "sh", "js", "ts", "html", "css", "json", "exe", "msi", "apk", "jar",
+            "7z", "rar",
+        )
+
+        /** Cover-art sidecar markers, e.g. "Game (USA).cover.png" */
+        val IMAGE_EXTENSIONS = setOf("png", "jpg", "jpeg", "webp")
+        val COVER_NAME_REGEX = Regex("(?i)[._ -]?(cover|front)\$")
+
+        /** Platform tokens in folder or file names ("like emulators that know their games"). */
+        val PLATFORM_NAME_TOKENS = mapOf(
+            "wii u" to Platform.WII_U, "wii" to Platform.WII,
+            "gamecube" to Platform.GAMECUBE, "gc" to Platform.GAMECUBE, "ngc" to Platform.GAMECUBE,
+            "nintendo ds" to Platform.NINTENDO_DS, "nds" to Platform.NINTENDO_DS,
+            "nintendo 3ds" to Platform.NINTENDO_3DS, "3ds" to Platform.NINTENDO_3DS,
+            "n64" to Platform.N64, "snes" to Platform.SNES, "nes" to Platform.NES,
+            "gba" to Platform.GBA, "gbc" to Platform.GAME_BOY_COLOR, "gameboy" to Platform.GAME_BOY,
+            "switch" to Platform.SWITCH,
+            "ps1" to Platform.PS1, "psx" to Platform.PS1, "playstation" to Platform.PS1,
+            "ps2" to Platform.PS2, "psp" to Platform.PSP, "ps3" to Platform.PS3,
+            "ps4" to Platform.PS4, "ps5" to Platform.PS5, "vita" to Platform.VITA,
+            "xbox 360" to Platform.XBOX_360, "x360" to Platform.XBOX_360, "xbox" to Platform.XBOX,
+            "dreamcast" to Platform.DREAMCAST, "dc" to Platform.DREAMCAST, "saturn" to Platform.SATURN,
+            "mega drive" to Platform.MEGA_DRIVE, "genesis" to Platform.MEGA_DRIVE,
+            "master system" to Platform.MASTER_SYSTEM, "game gear" to Platform.GAME_GEAR,
+            "amiga" to Platform.AMIGA, "atari" to Platform.ATARI_2600, "zx" to Platform.ZX_SPECTRUM,
+        )
     }
 
     /** Context gathered once per file and shared by all rules. */
@@ -72,9 +104,17 @@ class DetectionEngine(private val reader: ByteReader? = null) {
 
         val candidates = LinkedHashMap<Platform, Candidate>()
 
+        /** Weak evidence accumulates (name/folder/extension hints may combine). */
         fun add(platform: Platform, score: Float, reason: String) {
             val c = candidates.getOrPut(platform) { Candidate(platform) }
-            c.score = max(c.score, score)
+            c.score = (c.score + score).coerceAtMost(1f)
+            if (!c.reasons.contains(reason)) c.reasons.add(reason)
+        }
+
+        /** Strong evidence (magic bytes, disc structures) stands on its own. */
+        fun addStrong(platform: Platform, score: Float, reason: String) {
+            val c = candidates.getOrPut(platform) { Candidate(platform) }
+            if (score > c.score) c.score = score
             if (!c.reasons.contains(reason)) c.reasons.add(reason)
         }
 
@@ -85,6 +125,7 @@ class DetectionEngine(private val reader: ByteReader? = null) {
         checkFolderStructure(ctx, ::add)
 
         // ---- Layer 6-7: filename + extension (weakest) ----
+        checkNameTokens(ctx, ::add)
         val serialHits = checkSerialPatterns(ctx, ::add)
         checkExtension(ctx, ::add)
         checkSizeTieBreak(ctx, ::add)
@@ -127,7 +168,8 @@ class DetectionEngine(private val reader: ByteReader? = null) {
     // Signal rules
     // ------------------------------------------------------------------
 
-    private fun checkMagic(ctx: Ctx, add: (Platform, Float, String) -> Unit) {
+    private fun checkMagic(ctx: Ctx, addStrong: (Platform, Float, String) -> Unit) {
+        val add = addStrong
         val h = ctx.head(0x20000) ?: return
         val s = ctx.size
 
@@ -231,7 +273,9 @@ class DetectionEngine(private val reader: ByteReader? = null) {
         }
     }
 
-    private fun checkContainers(ctx: Ctx, add: (Platform, Float, String) -> Unit) {
+    private fun checkContainers(ctx: Ctx, addRaw: (Platform, Float, String) -> Unit) {
+        val add: (Platform, Float, String) -> Unit = { p, sc, r -> addRaw(p, sc.coerceAtMost(0.9f), r) }
+        val addWeak = addRaw
         val h = ctx.head(0x1000) ?: return
         when {
             // WBFS: Wii-only container
@@ -241,7 +285,7 @@ class DetectionEngine(private val reader: ByteReader? = null) {
                 add(Platform.PSP, 0.75f, "CISO compressed image")
             }
             // CHD: compressed CD/DVD; generic — weak, needs disc sniff below to resolve
-            h.startsWithAt(0, ascii("MComprHD")) -> add(Platform.UNKNOWN, 0.30f, "CHD compressed image (console unresolved)")
+            h.startsWithAt(0, ascii("MComprHD")) -> addWeak(Platform.UNKNOWN, 0.30f, "CHD compressed image (console unresolved)")
             // PBP: PSP EBOOT or PS1 popstation
             h.startsWithAt(0, ascii("PBP\u0000")) || h.startsWithAt(0, ascii("PBP\u0020")) -> {
                 val body = ctx.head(0x40000)
@@ -249,12 +293,12 @@ class DetectionEngine(private val reader: ByteReader? = null) {
                 else add(Platform.PSP, 0.85f, "PBP package (PSP EBOOT / PS1 conversion)")
             }
             // RVZ: Dolphin container — GC or Wii unresolved by itself
-            h.startsWithAt(0, ascii("RVZ\u0001")) -> add(Platform.UNKNOWN, 0.4f, "RVZ container (console unresolved)")
+            h.startsWithAt(0, ascii("RVZ\u0001")) -> addWeak(Platform.UNKNOWN, 0.4f, "RVZ container (console unresolved)")
         }
     }
 
     /** Disc sniffing: bounded scans for structure strings, never whole-file reads. */
-    private fun checkDiscStructures(ctx: Ctx, add: (Platform, Float, String) -> Unit) {
+    private fun checkDiscStructures(ctx: Ctx, add: (Platform, Float, String) -> Unit) {   // strong layer
         val h = ctx.head(0x10000) ?: return
         // ISO9660 primary volume descriptor at sector 16: 0x01 'C' 'D' '0' '0' '1'
         val isIso = h.size > 0x8006 && h[0x8000] == 0x01.toByte() &&
@@ -315,6 +359,23 @@ class DetectionEngine(private val reader: ByteReader? = null) {
         if (parents.any { Regex("^[a-z]{4}\\d{5}$").matches(it) } && parents.any { it == "sce_sys" }) add(Platform.PS5, 0.7f, "PS5-style title-id folder")
         if (parents.any { it == "nintendo 3ds" || it == "3ds" }) add(Platform.NINTENDO_3DS, 0.6f, "3DS folder name")
         if (parents.any { it.startsWith("ps3") }) add(Platform.PS3, 0.7f, "PS3-named folder")
+    }
+
+    /** Platform words in folder names ("Wii", "PS2", ...) — the emulator-style hint layer. */
+    private fun checkNameTokens(ctx: Ctx, add: (Platform, Float, String) -> Unit) {
+        ctx.parentNames.forEach { p ->
+            PLATFORM_NAME_TOKENS[p]?.let { add(it, 0.75f, "folder name: $p") }
+        }
+        val words = Regex("[a-z0-9]+").findAll(ctx.name.lowercase(Locale.US).substringBeforeLast('.'))
+            .map { it.value }.toSet()
+        words.forEach { w ->
+            PLATFORM_NAME_TOKENS[w]?.let { add(it, 0.7f, "console name in filename: $w") }
+        }
+        // multi-word folder names
+        val joined = ctx.parentNames.joinToString(" ")
+        PLATFORM_NAME_TOKENS.keys.filter { it.contains(' ') }.forEach { k ->
+            if (k in joined) add(PLATFORM_NAME_TOKENS.getValue(k), 0.75f, "folder name: $k")
+        }
     }
 
     private fun checkSerialPatterns(ctx: Ctx, add: (Platform, Float, String) -> Unit) {

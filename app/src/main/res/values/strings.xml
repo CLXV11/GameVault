@@ -98,4 +98,5 @@
     <string name="clean_unknown">Remove unknown entries</string>
     <string name="clean_unknown_confirm">All games whose platform could not be identified will be removed. Files on storage are not touched.</string>
     <string name="auto_organize">Auto-organize by platform</string>
+    <string name="not_a_game_file">This file does not look like a game — pick the game file itself (rvz, iso, wbfs…), and name a cover image "GameName.cover.png" next to it to attach it automatically.</string>
 </resources>

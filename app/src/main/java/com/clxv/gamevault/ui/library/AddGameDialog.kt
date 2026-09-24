@@ -51,6 +51,7 @@ fun AddGameDialog(
     var title by remember { mutableStateOf("") }
     var detected by remember { mutableStateOf<Platform?>(null) }
     var busy by remember { mutableStateOf(false) }
+    var isJunk by remember { mutableStateOf(false) }
 
     val picker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -58,6 +59,7 @@ fun AddGameDialog(
         uri ?: return@rememberLauncherForActivityResult
         picked = uri
         busy = true
+        isJunk = false
         scope.launch {
             val info = withContext(Dispatchers.IO) {
                 var name = uri.lastPathSegment ?: "file"
@@ -79,6 +81,8 @@ fun AddGameDialog(
             fileName = info.first
             title = info.second
             detected = if (info.third.platform != Platform.UNKNOWN) info.third.platform else null
+            isJunk = info.first.substringAfterLast('.', "").lowercase() in
+                    com.clxv.gamevault.core.detection.DetectionEngine.JUNK_EXTENSIONS
             busy = false
         }
     }
@@ -106,6 +110,13 @@ fun AddGameDialog(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    if (isJunk) {
+                        Text(
+                            stringResource(R.string.not_a_game_file),
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
                     detected?.let { p ->
                         SuggestionChip(
                             onClick = {},
@@ -123,7 +134,7 @@ fun AddGameDialog(
         },
         confirmButton = {
             TextButton(
-                enabled = picked != null && title.isNotBlank() && !busy,
+                enabled = picked != null && title.isNotBlank() && !busy && !isJunk,
                 onClick = {
                     scope.launch {
                         scanner.addSingleFile(picked!!, title.trim(), detected)

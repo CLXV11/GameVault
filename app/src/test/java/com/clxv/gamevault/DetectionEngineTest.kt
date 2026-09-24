@@ -168,6 +168,24 @@ class DetectionEngineTest {
     }
 
     @Test
+    fun rvzInWiiFolderIsDetectedAsWii() {
+        val buf = ByteArray(0x1000)
+        put(buf, 0, "RVZ\u0001")
+        val d = detect(buf, "New Super Mario Bros. Wii (USA).rvz", 700_000_000L,
+                       parents = listOf("Roms", "Wii"))
+        assertEquals(Platform.WII, d.platform)
+        assertEquals(ScanStatus.DETECTED, d.status)
+    }
+
+    @Test
+    fun consoleNameInFilenameBoostsRvz() {
+        val buf = ByteArray(0x1000)
+        put(buf, 0, "RVZ\u0001")
+        val d = detect(buf, "New Super Mario Bros. Wii (USA).rvz", 700_000_000L)
+        assertEquals(Platform.WII, d.platform)
+    }
+
+    @Test
     fun regionTagsParsed() {
         val e = DetectionEngine()
         assertEquals(Region.USA, e.extractRegion("Crash (USA).iso"))
