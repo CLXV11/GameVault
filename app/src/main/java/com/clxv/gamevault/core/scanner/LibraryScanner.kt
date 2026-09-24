@@ -39,6 +39,7 @@ class LibraryScanner @Inject constructor(
     private val db: AppDatabase,
     private val saf: com.clxv.gamevault.core.saf.SafManager,
     private val coverManager: com.clxv.gamevault.core.covers.CoverManager,
+    private val repo: com.clxv.gamevault.data.repository.GameRepository,
 ) {
     private val _progress = MutableStateFlow(ScanProgress())
     val progress: StateFlow<ScanProgress> = _progress.asStateFlow()
@@ -112,6 +113,9 @@ class LibraryScanner @Inject constructor(
             // Attach user cover art: "Game (USA).cover.png" -> cover of "Game (USA).rvz"
             pairCoverSidecars(coverSidecars)
 
+            // Emulator-style: auto-create platform groups (Wii, PS2, ...) after every scan
+            repo.organizeByPlatform()
+
             // Broken/missing file detection: any DB record under this root that no
             // longer resolves on disk is flagged, not silently deleted.
             val stale = db.gameDao().filesInRoot(root.id).filter { it.uri !in foundUris }
@@ -184,6 +188,7 @@ class LibraryScanner @Inject constructor(
                 quickHash = hash,
             ))
         }
+        repo.organizeByPlatform()
         return true
     }
 

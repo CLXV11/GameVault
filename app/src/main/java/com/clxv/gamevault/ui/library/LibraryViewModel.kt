@@ -22,6 +22,7 @@ data class LibraryUiState(
     val view: LibraryView = LibraryView.GRID,
     val coverScale: Float = 1.0f,
     val showUnknown: Boolean = true,
+    val cover3d: Boolean = true,
     val selection: Set<String> = emptySet(),
     val loading: Boolean = true,
     val platformsPresent: List<Platform> = emptyList(),
@@ -41,23 +42,25 @@ class LibraryViewModel @Inject constructor(
     private val favoritesOnly = MutableStateFlow(false)
     private val _selection = MutableStateFlow<Set<String>>(emptySet())
 
+    private val gamesFlow = query.debounce(200).flatMapLatest { q ->
+        if (q.isBlank()) repo.observeLibrary() else repo.search(q)
+    }
+
     val ui: StateFlow<LibraryUiState> = combine(
-        query.debounce(200).flatMapLatest { q ->
-            if (q.isBlank()) repo.observeLibrary() else repo.search(q)
-        },
-        platformFilter, favoritesOnly, settings.settings, _selection,
-    ) { games, plat, favOnly, s, selection ->
+        gamesFlow, query, platformFilter, favoritesOnly, settings.settings, _selection,
+    ) { games, q, plat, favOnly, s, selection ->
         LibraryUiState(
             games = games
                 .filter { g -> s.showUnknown || g.platform != Platform.UNKNOWN.name }
                 .filter { g -> plat == null || g.platform == plat.name }
                 .filter { g -> !favOnly || g.favorite },
-            query = query.value,
+            query = q,
             platformFilter = plat,
             favoritesOnly = favOnly,
             view = s.view,
             coverScale = s.coverScale,
             showUnknown = s.showUnknown,
+            cover3d = s.cover3d,
             selection = selection,
             loading = false,
             platformsPresent = games.map { Platform.valueOf(it.platform) }.distinct().sortedBy { it.label },
@@ -78,6 +81,7 @@ class LibraryViewModel @Inject constructor(
     fun hide(ids: List<String>) = viewModelScope.launch { repo.setHidden(ids, true); clearSelection() }
     fun addManualGame(uri: android.net.Uri, title: String, platform: Platform?) =
         viewModelScope.launch { scanner.addSingleFile(uri, title, platform) }
+    fun setCover3d(b: Boolean) = viewModelScope.launch { settings.setCover3d(b) }
     fun removeFromLibrary(ids: List<String>) = viewModelScope.launch { repo.removeFromLibrary(ids); clearSelection() }
     fun addToCollection(collectionId: String, ids: List<String>) = viewModelScope.launch {
         repo.addToCollection(collectionId, ids)

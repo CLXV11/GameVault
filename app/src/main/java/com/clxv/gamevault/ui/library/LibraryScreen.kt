@@ -31,6 +31,7 @@ import com.clxv.gamevault.core.settings.LibraryView
 import com.clxv.gamevault.data.local.entity.GameEntity
 import com.clxv.gamevault.ui.components.Cover3D
 import com.clxv.gamevault.ui.components.GameCard
+import com.clxv.gamevault.ui.components.PlatformIcon
 
 enum class SortMode { TITLE, PLATFORM, SIZE, DATE_ADDED }
 
@@ -129,6 +130,7 @@ fun LibraryScreen(
                         selected = state.platformFilter == p,
                         onClick = { vm.onPlatformFilter(if (state.platformFilter == p) null else p) },
                         label = { Text(p.short) },
+                        leadingIcon = { PlatformIcon(p, 16.dp) },
                     )
                 }
             }
@@ -163,6 +165,13 @@ fun LibraryScreen(
                                 )
                             }
                         }
+                    }
+                    // 3D / 2D cover mode
+                    IconButton(onClick = { vm.setCover3d(!state.cover3d) }) {
+                        Icon(
+                            imageVector = if (state.cover3d) Icons.Outlined.ViewInAr else Icons.Outlined.Rectangle,
+                            contentDescription = stringResource(R.string.view_3d),
+                        )
                     }
                     // view toggle
                     IconButton(onClick = {
@@ -280,18 +289,19 @@ private fun GridContent(
     onOpenGame: (String) -> Unit, vm: LibraryViewModel,
 ) {
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = (110 * state.coverScale).dp.coerceAtLeast(84.dp)),
+        columns = GridCells.Adaptive(minSize = (168 * state.coverScale).dp.coerceAtLeast(128.dp)),
         contentPadding = PaddingValues(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        verticalArrangement = Arrangement.spacedBy(26.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(22.dp),
     ) {
         items(games, key = { it.id }) { g ->
             GameCard(
                 game = g,
                 coverModel = vm.coverModel(g),
-                width = (140 * state.coverScale).dp,
+                width = (160 * state.coverScale).dp,
                 selected = g.id in state.selection,
                 view = LibraryView.GRID,
+                cover3d = state.cover3d,
                 onClick = { if (state.selection.isEmpty()) onOpenGame(g.id) else vm.toggleSelection(g.id) },
                 onLongClick = { vm.toggleSelection(g.id) },
             )
@@ -312,6 +322,7 @@ private fun ListContent(
                 width = 52.dp,
                 selected = g.id in state.selection,
                 view = LibraryView.LIST,
+                cover3d = state.cover3d,
                 onClick = { if (state.selection.isEmpty()) onOpenGame(g.id) else vm.toggleSelection(g.id) },
                 onLongClick = { vm.toggleSelection(g.id) },
             )

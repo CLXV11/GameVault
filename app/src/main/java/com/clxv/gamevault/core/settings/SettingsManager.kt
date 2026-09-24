@@ -28,6 +28,7 @@ data class AppSettings(
     val metadataProviderUrl: String = "",
     val themeColor: ThemeColor = ThemeColor.DEFAULT,
     val background: String = "none",   // "none" or an asset file name in backgrounds/
+    val cover3d: Boolean = true,
 )
 
 @Singleton
@@ -45,6 +46,7 @@ class SettingsManager @Inject constructor(@ApplicationContext context: Context) 
         val META_URL = stringPreferencesKey("meta_url")
         val THEME_COLOR = stringPreferencesKey("theme_color")
         val BACKGROUND = stringPreferencesKey("background")
+        val COVER_3D = booleanPreferencesKey("cover_3d")
     }
 
     val settings: Flow<AppSettings> = ds.data.map { p ->
@@ -58,6 +60,7 @@ class SettingsManager @Inject constructor(@ApplicationContext context: Context) 
             metadataProviderUrl = p[Keys.META_URL] ?: "",
             themeColor = runCatching { ThemeColor.valueOf(p[Keys.THEME_COLOR] ?: "DEFAULT") }.getOrDefault(ThemeColor.DEFAULT),
             background = p[Keys.BACKGROUND] ?: "none",
+            cover3d = p[Keys.COVER_3D] ?: true,
         )
     }
 
@@ -70,4 +73,5 @@ class SettingsManager @Inject constructor(@ApplicationContext context: Context) 
     suspend fun setMetadataUrl(u: String) = ds.edit { it[Keys.META_URL] = u }
     suspend fun setThemeColor(c: ThemeColor) = ds.edit { it[Keys.THEME_COLOR] = c.name }
     suspend fun setBackground(b: String) = ds.edit { it[Keys.BACKGROUND] = b }
+    suspend fun setCover3d(b: Boolean) = ds.edit { it[Keys.COVER_3D] = b }
 }

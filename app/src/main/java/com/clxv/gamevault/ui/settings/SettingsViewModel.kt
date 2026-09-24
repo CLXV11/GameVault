@@ -46,6 +46,7 @@ class SettingsViewModel @Inject constructor(
     fun setCoverScale(f: Float) = viewModelScope.launch { settingsManager.setCoverScale(f) }
     fun setShowUnknown(b: Boolean) = viewModelScope.launch { settingsManager.setShowUnknown(b) }
     fun setGyro(b: Boolean) = viewModelScope.launch { settingsManager.setGyroTilt(b) }
+    fun setCover3d(b: Boolean) = viewModelScope.launch { settingsManager.setCover3d(b) }
     fun setMetadataEnabled(b: Boolean) = viewModelScope.launch { settingsManager.setMetadataEnabled(b) }
     fun setMetadataUrl(u: String) = viewModelScope.launch { settingsManager.setMetadataUrl(u) }
     fun setThemeColor(c: com.clxv.gamevault.core.settings.ThemeColor) = viewModelScope.launch { settingsManager.setThemeColor(c) }

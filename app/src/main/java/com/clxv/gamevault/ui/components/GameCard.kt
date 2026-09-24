@@ -2,7 +2,17 @@ package com.clxv.gamevault.ui.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.remember
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
@@ -29,6 +39,7 @@ fun GameCard(
     width: Dp,
     selected: Boolean,
     view: com.clxv.gamevault.core.settings.LibraryView,
+    cover3d: Boolean = true,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -42,7 +53,8 @@ fun GameCard(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Box {
-                    Cover3D(coverModel = coverModel, width = width, enabled = !selected)
+                    if (cover3d) Cover3D(coverModel = coverModel, width = width, enabled = !selected)
+                    else FlatCover(coverModel = coverModel, width = width)
                     if (game.favorite) {
                         Icon(
                             imageVector = Icons.Filled.Favorite,
@@ -61,8 +73,8 @@ fun GameCard(
                 Spacer(Modifier.height(8.dp))
                 Text(
                     text = game.title,
-                    style = MaterialTheme.typography.labelLarge,
-                    maxLines = 2,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -82,7 +94,8 @@ fun GameCard(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Cover3D(coverModel = coverModel, width = 52.dp, enabled = false)
+                if (cover3d) Cover3D(coverModel = coverModel, width = 52.dp, enabled = false)
+                else FlatCover(coverModel = coverModel, width = 52.dp)
                 Spacer(Modifier.width(16.dp))
                 Column(Modifier.weight(1f)) {
                     Text(game.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -116,7 +129,8 @@ private fun GridCardFallback(
     onClick: () -> Unit, onLongClick: () -> Unit, modifier: Modifier,
 ) {
     Column(modifier = modifier.width(width).combinedClickable(onClick = onClick, onLongClick = onLongClick)) {
-        Cover3D(coverModel = coverModel, width = width, enabled = false)
+        if (cover3d) Cover3D(coverModel = coverModel, width = width, enabled = false)
+        else FlatCover(coverModel = coverModel, width = width)
         Spacer(Modifier.height(6.dp))
         Text(game.title, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
@@ -137,3 +151,62 @@ fun formatDate(ts: Long?): String {
     if (ts == null) return "—"
     return SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(ts))
 }
+
+
+/** Flat 2D cover variant (no perspective), used when 3D mode is off. */
+@Composable
+fun FlatCover(
+    coverModel: CoverModel,
+    width: Dp,
+    modifier: Modifier = Modifier,
+) {
+    val frontBitmap = remember(coverModel.customCoverPath) {
+        val p = coverModel.customCoverPath
+        if (p != null && java.io.File(p).exists())
+            android.graphics.BitmapFactory.decodeFile(p)?.asImageBitmap() else null
+    }
+    val (c1, c2) = coverModel.placeholderColors
+    Surface(
+        shape = MaterialTheme.shapes.medium,
+        tonalElevation = 2.dp,
+        shadowElevation = 4.dp,
+        modifier = modifier.width(width),
+    ) {
+        Box(
+            Modifier
+                .width(width)
+                .aspectRatio(3f / 4f)
+                .clip(MaterialTheme.shapes.medium)
+                .background(androidx.compose.ui.graphics.Brush.verticalGradient(
+                    listOf(composeColor(c1), composeColor(c2)))),
+        ) {
+            if (frontBitmap != null) {
+                Image(
+                    bitmap = frontBitmap, contentDescription = coverModel.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                Text(
+                    "?", style = MaterialTheme.typography.headlineMedium,
+                    color = Color.White.copy(alpha = 0.35f),
+                    modifier = Modifier.align(Alignment.Center),
+                )
+                Text(
+                    coverModel.title,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White,
+                    maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .background(androidx.compose.ui.graphics.Brush.verticalGradient(
+                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f))))
+                        .padding(horizontal = 6.dp, vertical = 4.dp)
+                        .fillMaxWidth(),
+                )
+            }
+        }
+    }
+}
+
+private fun composeColor(v: Long) = Color(v)

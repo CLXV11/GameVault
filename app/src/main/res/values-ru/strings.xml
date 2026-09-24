@@ -99,4 +99,5 @@
     <string name="clean_unknown_confirm">Будут удалены все игры с неопределённой платформой. Сами файлы не затрагиваются.</string>
     <string name="auto_organize">Автосортировка по платформе</string>
     <string name="not_a_game_file">Это не похоже на игру — выберите сам файл игры (rvz, iso, wbfs…). Обложку положите рядом как "Игра.cover.png", и она подключится автоматически.</string>
+    <string name="view_3d">3D-обложки</string>
 </resources>

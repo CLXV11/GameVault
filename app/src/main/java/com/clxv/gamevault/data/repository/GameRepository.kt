@@ -90,10 +90,11 @@ class GameRepository @Inject constructor(private val db: AppDatabase) {
      * named after its platform (collections are created on demand).
      */
     suspend fun organizeByPlatform() {
-        val games = db.gameDao().allGamesSnapshot().filter { !it.hidden }
+        val games = db.gameDao().allGamesSnapshot().filter { !it.hidden && it.platform != Platform.UNKNOWN.name }
         val existing = db.collectionDao().observeAll().first().associateBy { it.name }
         games.groupBy { it.platform }.forEach { (platName, list) ->
-            val label = runCatching { Platform.valueOf(platName).label }.getOrDefault(platName)
+            // Emulator-style short names: "Wii", "PS2", "GC" — like Dolphin's tabs
+            val label = runCatching { Platform.valueOf(platName).short }.getOrDefault(platName)
             val col = existing[label]
                 ?: com.clxv.gamevault.data.local.entity.CollectionEntity(
                     id = java.util.UUID.randomUUID().toString(), name = label,

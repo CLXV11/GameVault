@@ -293,7 +293,23 @@ class DetectionEngine(private val reader: ByteReader? = null) {
                 else add(Platform.PSP, 0.85f, "PBP package (PSP EBOOT / PS1 conversion)")
             }
             // RVZ: Dolphin container — GC or Wii unresolved by itself
-            h.startsWithAt(0, ascii("RVZ\u0001")) -> addWeak(Platform.UNKNOWN, 0.4f, "RVZ container (console unresolved)")
+            h.startsWithAt(0, ascii("RVZ\u0001")) -> {
+                addWeak(Platform.UNKNOWN, 0.4f, "RVZ container (console unresolved)")
+                // Stored (uncompressed) RVZ keeps the raw disc image: hunt the GC/Wii magic.
+                if (h.readInt32LE(8) == 0) {
+                    val deep = ctx.head()
+                    val magic = byteArrayOf(0xC2.toByte(), 0x33, 0x9F.toByte(), 0x3D)
+                    val idx = deep?.indexOfSub(magic) ?: -1
+                    if (idx >= 0) {
+                        val isWii = ctx.size > 0x57058000L
+                        addStrong(
+                            if (isWii) Platform.WII else Platform.GAMECUBE,
+                            0.9f,
+                            "RVZ (stored) disc magic at 0x${idx.toString(16)}",
+                        )
+                    }
+                }
+            }
         }
     }
 

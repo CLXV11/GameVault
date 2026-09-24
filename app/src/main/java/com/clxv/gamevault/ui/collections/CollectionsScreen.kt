@@ -17,6 +17,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.clxv.gamevault.R
+import com.clxv.gamevault.ui.components.PlatformIcon
+import com.clxv.gamevault.ui.components.platformByShort
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,8 +51,10 @@ fun CollectionsScreen(onBack: () -> Unit, vm: CollectionsViewModel = hiltViewMod
                 } else {
                     LazyColumn(Modifier.fillMaxSize()) {
                         items(collections, key = { it.id }) { c ->
+                            val plat = platformByShort(c.name)
                             ListItem(
                                 headlineContent = { Text(c.name) },
+                                leadingContent = { plat?.let { PlatformIcon(it, 30.dp) } },
                                 modifier = Modifier.fillMaxWidth().clickable { selectedId = c.id },
                                 trailingContent = {
                                     IconButton(onClick = { vm.delete(c.id) }) {

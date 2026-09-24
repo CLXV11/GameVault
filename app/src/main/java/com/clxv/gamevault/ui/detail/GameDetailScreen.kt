@@ -23,6 +23,7 @@ import com.clxv.gamevault.core.model.Platform
 import com.clxv.gamevault.core.model.ScanStatus
 import com.clxv.gamevault.data.local.entity.GameWithFiles
 import com.clxv.gamevault.ui.components.Cover3D
+import com.clxv.gamevault.ui.components.PlatformIcon
 import com.clxv.gamevault.ui.components.formatBytes
 import com.clxv.gamevault.ui.components.formatDate
 import com.clxv.gamevault.ui.components.platformLabel
@@ -78,7 +79,17 @@ fun GameDetailScreen(
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     StatusBadge(status = g.files.firstOrNull()?.status ?: ScanStatus.UNKNOWN.name)
-                    SuggestionChip(onClick = { showIdentify = true }, label = { Text(platformLabel(g.game.platform)) })
+                    SuggestionChip(
+                        onClick = { showIdentify = true },
+                        label = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                runCatching { Platform.valueOf(g.game.platform) }.getOrNull()
+                                    ?.let { PlatformIcon(it, 18.dp) }
+                                Spacer(Modifier.width(6.dp))
+                                Text(platformLabel(g.game.platform))
+                            }
+                        },
+                    )
                     if (g.game.region != "UNKNOWN") {
                         AssistChip(onClick = {}, label = { Text(g.game.region) })
                     }

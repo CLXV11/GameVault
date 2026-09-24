@@ -28,6 +28,11 @@ class DetectionEngineTest {
         s.toByteArray(Charsets.US_ASCII).copyInto(b, off)
     }
 
+    private fun put32le(b: ByteArray, off: Int, v: Int) {
+        b[off] = v.toByte(); b[off + 1] = (v shr 8).toByte()
+        b[off + 2] = (v shr 16).toByte(); b[off + 3] = (v shr 24).toByte()
+    }
+
     private fun put32be(b: ByteArray, off: Int, v: Int) {
         b[off] = (v shr 24).toByte()
         b[off + 1] = (v shr 16).toByte()
@@ -183,6 +188,26 @@ class DetectionEngineTest {
         put(buf, 0, "RVZ\u0001")
         val d = detect(buf, "New Super Mario Bros. Wii (USA).rvz", 700_000_000L)
         assertEquals(Platform.WII, d.platform)
+    }
+
+    @Test
+    fun uncompressedRvzExposesDiscMagic() {
+        fun rvz(size: Long): ByteArray {
+            val b = ByteArray(0x10000)
+            put(b, 0, "RVZ\u0001")          // magic
+            put32le(b, 4, 0)                // version
+            put32le(b, 8, 0)                // compression = none
+            put32le(b, 12, 0x20000)         // chunk size
+            put(b, 0x8000, "DISC")
+            // GC/Wii disc magic somewhere in the raw data
+            b[0x8080] = 0xC2.toByte(); b[0x8081] = 0x33
+            b[0x8082] = 0x9F.toByte(); b[0x8083] = 0x3D
+            return b
+        }
+        assertEquals(Platform.GAMECUBE,
+            detect(rvz(1_400_000_000L), "Baldur's Gate (USA).rvz", 1_400_000_000L).platform)
+        assertEquals(Platform.WII,
+            detect(rvz(4_700_000_000L), "Zelda (USA).rvz", 4_700_000_000L).platform)
     }
 
     @Test

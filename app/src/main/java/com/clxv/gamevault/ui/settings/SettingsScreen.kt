@@ -187,6 +187,12 @@ fun SettingsScreen(
                     Switch(checked = state.settings.gyroTilt, onCheckedChange = { vm.setGyro(it) })
                 }
             }
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.view_3d), modifier = Modifier.weight(1f))
+                    Switch(checked = state.settings.cover3d, onCheckedChange = { vm.setCover3d(it) })
+                }
+            }
 
             item { SectionTitle(stringResource(R.string.theme_color)) }
             item {
