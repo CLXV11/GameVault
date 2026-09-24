@@ -150,7 +150,7 @@ class LibraryScanner @Inject constructor(
             runCatching {
                 context.contentResolver.query(uri, null, null, null, null)?.use { c ->
                     val si = c.getColumnIndex(android.provider.OpenableColumns.SIZE)
-                    val mi = c.getColumnIndex(android.provider.OpenableColumns.LAST_MODIFIED)
+                    val mi = c.getColumnIndex(android.provider.DocumentsContract.Document.COLUMN_LAST_MODIFIED)
                     if (c.moveToFirst()) {
                         if (si >= 0) size = c.getLong(si)
                         if (mi >= 0) mtime = c.getLong(mi)
