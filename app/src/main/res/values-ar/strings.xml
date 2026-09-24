@@ -97,4 +97,5 @@
     <string name="bg_none">بدون خلفية</string>
     <string name="clean_unknown">إزالة العناصر غير المعروفة</string>
     <string name="clean_unknown_confirm">ستتم إزالة كل الألعاب التي تعذّر التعرف على منصتها. لن يتم تعديل الملفات نفسها.</string>
+    <string name="auto_organize">تنظيم تلقائي حسب الجهاز</string>
 </resources>

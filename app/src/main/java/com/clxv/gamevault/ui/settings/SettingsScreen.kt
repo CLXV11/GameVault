@@ -13,8 +13,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -78,6 +86,7 @@ fun SettingsScreen(
     }
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.settings)) },
@@ -181,8 +190,12 @@ fun SettingsScreen(
 
             item { SectionTitle(stringResource(R.string.theme_color)) }
             item {
-                Row {
-                    ThemeColor.entries.forEach { c ->
+                // Scrollable — long labels in some locales must never clip the last chip
+                androidx.compose.foundation.lazy.LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items(ThemeColor.entries.size) { i ->
+                        val c = ThemeColor.entries[i]
                         FilterChip(
                             selected = state.settings.themeColor == c,
                             onClick = { vm.setThemeColor(c) },
@@ -193,23 +206,24 @@ fun SettingsScreen(
                                 ThemeColor.AMETHYST -> R.string.theme_amethyst
                                 ThemeColor.GRAPHITE -> R.string.theme_graphite
                             }), maxLines = 1) },
-                            modifier = Modifier.padding(end = 6.dp),
                         )
                     }
                 }
             }
             item { SectionTitle(stringResource(R.string.background)) }
             item {
+                // Image picker: real thumbnails, tap to apply
                 androidx.compose.foundation.lazy.LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     items(backgrounds.size) { i ->
                         val (file, label) = backgrounds[i]
                         val selected = state.settings.background == file
-                        FilterChip(
+                        WallpaperThumb(
+                            file = file,
+                            label = label,
                             selected = selected,
                             onClick = { vm.setBackground(file) },
-                            label = { Text(label, maxLines = 1) },
                         )
                     }
                 }
@@ -304,4 +318,60 @@ private fun SectionTitle(text: String) {
     Text(text, style = MaterialTheme.typography.titleMedium,
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(top = 12.dp))
+}
+
+
+/** Wallpaper thumbnail loaded from assets (sampled) with selection ring. */
+@Composable
+private fun WallpaperThumb(
+    file: String,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val context = LocalContext.current
+    val bmp by androidx.compose.runtime.produceState<android.graphics.Bitmap?>(initialValue = null, file) {
+        value = if (file == "none") null else runCatching {
+            context.assets.open("backgrounds/$file").use { input ->
+                val opts = android.graphics.BitmapFactory.Options().apply { inSampleSize = 4 }
+                android.graphics.BitmapFactory.decodeStream(input, null, opts)
+            }
+        }.getOrNull()
+    }
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Surface(
+            onClick = onClick,
+            shape = MaterialTheme.shapes.medium,
+            border = if (selected)
+                androidx.compose.foundation.BorderStroke(3.dp, MaterialTheme.colorScheme.primary)
+            else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            modifier = Modifier.width(120.dp).height(74.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        ) {
+            if (bmp != null) {
+                Image(
+                    bitmap = bmp!!.asImageBitmap(),
+                    contentDescription = label,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        "—",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (selected) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+        )
+    }
 }

@@ -97,4 +97,5 @@
     <string name="bg_none">No wallpaper</string>
     <string name="clean_unknown">Remove unknown entries</string>
     <string name="clean_unknown_confirm">All games whose platform could not be identified will be removed. Files on storage are not touched.</string>
+    <string name="auto_organize">Auto-organize by platform</string>
 </resources>

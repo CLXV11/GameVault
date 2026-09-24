@@ -97,4 +97,5 @@
     <string name="bg_none">Без фона</string>
     <string name="clean_unknown">Удалить неопознанные</string>
     <string name="clean_unknown_confirm">Будут удалены все игры с неопределённой платформой. Сами файлы не затрагиваются.</string>
+    <string name="auto_organize">Автосортировка по платформе</string>
 </resources>

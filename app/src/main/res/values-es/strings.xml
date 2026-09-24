@@ -97,4 +97,5 @@
     <string name="bg_none">Sin fondo</string>
     <string name="clean_unknown">Eliminar entradas desconocidas</string>
     <string name="clean_unknown_confirm">Se eliminarán todos los juegos cuya plataforma no se pudo identificar. Los archivos no se tocan.</string>
+    <string name="auto_organize">Organizar automáticamente por plataforma</string>
 </resources>

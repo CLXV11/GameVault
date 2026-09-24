@@ -19,6 +19,7 @@ class CollectionsViewModel @Inject constructor(private val repo: GameRepository)
     fun observeCollection(id: String): Flow<CollectionWithGames?> = repo.observeCollection(id)
 
     fun create(name: String) = viewModelScope.launch { repo.createCollection(name) }
+    fun organize() = viewModelScope.launch { repo.organizeByPlatform() }
     fun delete(id: String) = viewModelScope.launch { repo.deleteCollection(id) }
     fun removeGames(collectionId: String, gameIds: List<String>) = viewModelScope.launch {
         repo.removeFromCollection(collectionId, gameIds)

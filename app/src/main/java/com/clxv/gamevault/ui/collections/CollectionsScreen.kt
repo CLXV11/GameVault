@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -25,6 +26,7 @@ fun CollectionsScreen(onBack: () -> Unit, vm: CollectionsViewModel = hiltViewMod
     var selectedId by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.collections)) },
@@ -35,23 +37,29 @@ fun CollectionsScreen(onBack: () -> Unit, vm: CollectionsViewModel = hiltViewMod
     ) { padding ->
         val sel = selectedId
         if (sel == null) {
-            if (collections.isEmpty()) {
-                Box(Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(stringResource(R.string.no_collections), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            } else {
-                LazyColumn(Modifier.padding(padding)) {
-                    items(collections, key = { it.id }) { c ->
-                        ListItem(
-                            headlineContent = { Text(c.name) },
-                            modifier = Modifier.fillMaxWidth().clickable { selectedId = c.id },
-                            trailingContent = {
-                                IconButton(onClick = { vm.delete(c.id) }) {
-                                    Icon(Icons.Outlined.DeleteOutline, stringResource(R.string.delete))
-                                }
-                            },
-                        )
-                        HorizontalDivider(thickness = 0.5.dp)
+            Column(Modifier.padding(padding).fillMaxSize()) {
+                FilledTonalButton(
+                    onClick = { vm.organize() },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                ) { Text(stringResource(R.string.auto_organize)) }
+                if (collections.isEmpty()) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(stringResource(R.string.no_collections), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                } else {
+                    LazyColumn(Modifier.fillMaxSize()) {
+                        items(collections, key = { it.id }) { c ->
+                            ListItem(
+                                headlineContent = { Text(c.name) },
+                                modifier = Modifier.fillMaxWidth().clickable { selectedId = c.id },
+                                trailingContent = {
+                                    IconButton(onClick = { vm.delete(c.id) }) {
+                                        Icon(Icons.Outlined.DeleteOutline, stringResource(R.string.delete))
+                                    }
+                                },
+                            )
+                            HorizontalDivider(thickness = 0.5.dp)
+                        }
                     }
                 }
             }

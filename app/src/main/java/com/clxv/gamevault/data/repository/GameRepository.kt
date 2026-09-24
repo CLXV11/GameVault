@@ -85,6 +85,26 @@ class GameRepository @Inject constructor(private val db: AppDatabase) {
         gameIds.forEach { db.collectionDao().removeGame(collectionId, it) }
     }
 
+    /**
+     * Fast DB-only organizer: groups every visible game into a collection
+     * named after its platform (collections are created on demand).
+     */
+    suspend fun organizeByPlatform() {
+        val games = db.gameDao().allGamesSnapshot().filter { !it.hidden }
+        val existing = db.collectionDao().observeAll().first().associateBy { it.name }
+        games.groupBy { it.platform }.forEach { (platName, list) ->
+            val label = runCatching { Platform.valueOf(platName).label }.getOrDefault(platName)
+            val col = existing[label]
+                ?: com.clxv.gamevault.data.local.entity.CollectionEntity(
+                    id = java.util.UUID.randomUUID().toString(), name = label,
+                ).also { db.collectionDao().upsert(it) }
+            list.forEach { g ->
+                db.collectionDao().addGame(
+                    com.clxv.gamevault.data.local.entity.CollectionGameCrossRef(col.id, g.id))
+            }
+        }
+    }
+
     suspend fun deleteCollection(id: String) {
         db.collectionDao().clear(id)
         db.collectionDao().delete(id)
