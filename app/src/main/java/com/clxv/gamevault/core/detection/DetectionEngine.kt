@@ -45,15 +45,17 @@ class DetectionEngine(private val reader: ByteReader? = null) {
         val reader: ByteReader?,
     ) {
         private var sniffed: ByteArray? = null
-        private var sniffTried = false
 
-        /** Lazily loads a bounded sniff window. Null when unreadable or too small. */
+        /**
+         * Bounded sniff window that GROWS on demand: an early small read
+         * (magic bytes) must never cap a later deep scan (disc strings).
+         */
         fun head(limit: Long = MAX_SNIFF_BYTES): ByteArray? {
-            if (sniffTried) return sniffed
-            sniffTried = true
-            val r = reader ?: return null
             val want = minOf(limit, size).toInt()
             if (want <= 0) return null
+            val cur = sniffed
+            if (cur != null && cur.size >= want) return cur
+            val r = reader ?: return null
             sniffed = try { r.readAt(0, want) } catch (e: Exception) { null }
             return sniffed
         }
