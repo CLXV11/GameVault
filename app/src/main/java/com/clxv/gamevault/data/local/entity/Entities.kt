@@ -70,7 +70,8 @@ data class CollectionEntity(
     val createdAt: Long = System.currentTimeMillis(),
 )
 
-@Entity(tableName = "collection_games", primaryKeys = ["collectionId", "gameId"])
+@Entity(tableName = "collection_games", primaryKeys = ["collectionId", "gameId"],
+          indices = [Index(value = ["gameId"])])
 data class CollectionGameCrossRef(
     val collectionId: String,
     val gameId: String,

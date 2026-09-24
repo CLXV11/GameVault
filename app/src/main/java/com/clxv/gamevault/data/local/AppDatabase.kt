@@ -24,7 +24,7 @@ import com.clxv.gamevault.data.local.entity.ScanHistoryEntity
         ScanHistoryEntity::class,
     ],
     version = 1,
-    exportSchema = true,
+    exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun gameDao(): GameDao
