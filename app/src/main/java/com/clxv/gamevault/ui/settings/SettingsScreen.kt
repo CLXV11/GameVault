@@ -1,0 +1,239 @@
+package com.clxv.gamevault.ui.settings
+
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.documentfile.provider.DocumentFile
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.clxv.gamevault.R
+import com.clxv.gamevault.core.settings.ThemeMode
+import com.clxv.gamevault.data.repository.GameRepository
+import com.clxv.gamevault.ui.components.formatBytes
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+@HiltViewModel
+class HiddenViewModel @Inject constructor(private val repo: GameRepository) : ViewModel() {
+    val hidden: StateFlow<List<com.clxv.gamevault.data.local.entity.GameEntity>> =
+        repo.observeHidden().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    fun unhide(ids: List<String>) = viewModelScope.launch { repo.setHidden(ids, false) }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsScreen(
+    onBack: () -> Unit,
+    vm: SettingsViewModel = hiltViewModel(),
+    hiddenVm: HiddenViewModel = hiltViewModel(),
+) {
+    val state by vm.ui.collectAsState()
+    val context = LocalContext.current
+    var metaUrl by remember(state.settings.metadataProviderUrl) { mutableStateOf(state.settings.metadataProviderUrl) }
+    var showHidden by remember { mutableStateOf(false) }
+
+    val treeLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        uri?.let {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    it,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                )
+            }
+            val name = DocumentFile.fromTreeUri(context, it)?.name ?: it.lastPathSegment ?: it.toString()
+            vm.addRoot(it, name)
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.settings)) },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } },
+            )
+        },
+    ) { padding ->
+        LazyColumn(
+            Modifier.padding(padding).fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            item { SectionTitle(stringResource(R.string.library_folders)) }
+            items(state.roots, key = { it.id }) { r ->
+                ListItem(
+                    headlineContent = { Text(r.displayName) },
+                    supportingContent = { Text(r.uri) },
+                    trailingContent = {
+                        IconButton(onClick = {
+                            runCatching {
+                                context.contentResolver.releasePersistableUriPermission(
+                                    android.net.Uri.parse(r.uri),
+                                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                            }
+                            vm.removeRoot(r.id)
+                        }) { Icon(Icons.Outlined.DeleteOutline, stringResource(R.string.remove)) }
+                    },
+                )
+            }
+            item {
+                OutlinedButton(
+                    onClick = { treeLauncher.launch(null) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Outlined.CreateNewFolder, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.add_folder))
+                }
+            }
+
+            item { SectionTitle(stringResource(R.string.scan)) }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { vm.rescan() },
+                        enabled = !state.scanning && state.roots.isNotEmpty(),
+                    ) { Text(stringResource(R.string.rescan)) }
+                    if (state.scanning) {
+                        TextButton(onClick = { vm.cancelScan() }) { Text(stringResource(R.string.cancel_scan)) }
+                    }
+                }
+                if (state.scanning) {
+                    LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 8.dp))
+                }
+            }
+            items(state.scanHistory.take(5)) { h ->
+                Text(
+                    "${java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date(h.startedAt))}" +
+                    "  ·  ${h.status}  ·  " + stringResource(R.string.games_count, h.gamesAdded + h.gamesUpdated),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            item { SectionTitle(stringResource(R.string.appearance)) }
+            item {
+                Text(stringResource(R.string.theme), style = MaterialTheme.typography.titleSmall)
+                Row {
+                    ThemeMode.entries.forEach { t ->
+                        FilterChip(
+                            selected = state.settings.theme == t,
+                            onClick = { vm.setTheme(t) },
+                            label = { Text(stringResource(when (t) {
+                                ThemeMode.SYSTEM -> R.string.theme_system
+                                ThemeMode.LIGHT -> R.string.theme_light
+                                ThemeMode.DARK -> R.string.theme_dark
+                            })) },
+                            modifier = Modifier.padding(end = 8.dp),
+                        )
+                    }
+                }
+            }
+            item {
+                Column {
+                    Text(stringResource(R.string.cover_size), style = MaterialTheme.typography.titleSmall)
+                    Slider(value = state.settings.coverScale, onValueChange = { vm.setCoverScale(it) }, valueRange = 0.6f..1.6f)
+                }
+            }
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.show_unknown), modifier = Modifier.weight(1f))
+                    Switch(checked = state.settings.showUnknown, onCheckedChange = { vm.setShowUnknown(it) })
+                }
+            }
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.gyro_tilt), modifier = Modifier.weight(1f))
+                    Switch(checked = state.settings.gyroTilt, onCheckedChange = { vm.setGyro(it) })
+                }
+            }
+
+            item { SectionTitle(stringResource(R.string.metadata_provider)) }
+            item {
+                Text(stringResource(R.string.metadata_provider_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.enabled), modifier = Modifier.weight(1f))
+                    Switch(
+                        checked = state.settings.metadataProviderEnabled,
+                        onCheckedChange = { vm.setMetadataEnabled(it) },
+                    )
+                }
+                OutlinedTextField(
+                    value = metaUrl, onValueChange = { metaUrl = it },
+                    label = { Text("Endpoint URL") },
+                    enabled = state.settings.metadataProviderEnabled,
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                TextButton(onClick = { vm.setMetadataUrl(metaUrl) }) { Text(stringResource(R.string.save)) }
+            }
+
+            item { SectionTitle(stringResource(R.string.storage_stats)) }
+            item {
+                ElevatedCard(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(stringResource(R.string.games_count, state.gameCount))
+                        Text(stringResource(R.string.files_count, state.fileCount.toInt()))
+                        Text(stringResource(R.string.total_size_x, formatBytes(state.totalBytes)))
+                    }
+                }
+            }
+            item {
+                OutlinedButton(onClick = { showHidden = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.hidden_games))
+                }
+            }
+        }
+    }
+
+    if (showHidden) {
+        val hidden by hiddenVm.hidden.collectAsState()
+        AlertDialog(
+            onDismissRequest = { showHidden = false },
+            title = { Text(stringResource(R.string.hidden_games)) },
+            text = {
+                if (hidden.isEmpty()) Text("—")
+                else Column {
+                    hidden.forEach { g ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(g.title, modifier = Modifier.weight(1f), maxLines = 1)
+                            TextButton(onClick = { hiddenVm.unhide(listOf(g.id)) }) {
+                                Text(stringResource(R.string.unhide))
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showHidden = false }) { Text(stringResource(R.string.close)) } },
+        )
+    }
+}
+
+@Composable
+private fun SectionTitle(text: String) {
+    Text(text, style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(top = 12.dp))
+}

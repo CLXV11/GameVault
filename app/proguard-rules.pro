@@ -1,0 +1,2 @@
+-keep class com.clxv.gamevault.data.local.entity.** { *; }
+-dontwarn org.bouncycastle.**
