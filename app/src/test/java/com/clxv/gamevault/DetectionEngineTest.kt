@@ -47,13 +47,13 @@ class DetectionEngineTest {
     }
 
     @Test fun `GameCube magic with GC size stays GameCube`() {
-        val d = detect(buf { put32be(it, 0x1C, 0xC2339F3D) }, "metroid.gcm", 1_459_978_240L)
+        val d = detect(buf { put32be(it, 0x1C, 0xC2339F3D.toInt()) }, "metroid.gcm", 1_459_978_240L)
         assertEquals(Platform.GAMECUBE, d.platform)
         assertNotEquals(Platform.WII, d.platform)
     }
 
     @Test fun `Same magic with DVD size is Wii`() {
-        val d = detect(buf { put32be(it, 0x1C, 0xC2339F3D) }, "galaxy.iso", 4_699_979_776L)
+        val d = detect(buf { put32be(it, 0x1C, 0xC2339F3D.toInt()) }, "galaxy.iso", 4_699_979_776L)
         assertEquals(Platform.WII, d.platform)
     }
 

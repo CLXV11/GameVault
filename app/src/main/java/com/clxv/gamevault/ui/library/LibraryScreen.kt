@@ -24,17 +24,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.foundation.Image
 import com.clxv.gamevault.R
 import com.clxv.gamevault.core.model.Platform
 import com.clxv.gamevault.core.settings.LibraryView
 import com.clxv.gamevault.data.local.entity.GameEntity
 import com.clxv.gamevault.ui.components.Cover3D
-import com.clxv.gamevault.ui.components.CoverModel
 import com.clxv.gamevault.ui.components.GameCard
-import com.clxv.gamevault.ui.components.platformLabel
 
 enum class SortMode { TITLE, PLATFORM, SIZE, DATE_ADDED }
 
@@ -83,6 +78,7 @@ fun LibraryScreen(
             )
         },
     ) { padding ->
+        Box(Modifier.fillMaxSize()) {
         Column(Modifier.padding(padding).fillMaxSize()) {
             // Search
             OutlinedTextField(
@@ -188,9 +184,9 @@ fun LibraryScreen(
             } else if (sortedGames.isEmpty()) {
                 EmptyLibrary(onOpenSettings)
             } else when (state.view) {
-                LibraryView.GRID -> GridContent(sortedGames, state, coverManager, onOpenGame, vm)
-                LibraryView.LIST -> ListContent(sortedGames, state, coverManager, onOpenGame, vm)
-                LibraryView.SHELF -> ShelfContent(sortedGames, state, coverManager, onOpenGame, vm)
+                LibraryView.GRID -> GridContent(sortedGames, state, vm, onOpenGame)
+                LibraryView.LIST -> ListContent(sortedGames, state, vm, onOpenGame)
+                LibraryView.SHELF -> ShelfContent(sortedGames, state, vm, onOpenGame)
             }
         }
 
@@ -225,6 +221,7 @@ fun LibraryScreen(
                     }
                 }
             }
+        }
         }
     }
 
@@ -267,7 +264,7 @@ private fun CollectionPickerDialog(onDismiss: () -> Unit, onPick: (String) -> Un
 
 @Composable
 private fun GridContent(
-    games: List<GameEntity>, state: LibraryUiState, vm: LibraryViewModel,
+    games: List<GameEntity>, state: LibraryUiState,
     onOpenGame: (String) -> Unit, vm: LibraryViewModel,
 ) {
     LazyVerticalGrid(
@@ -292,7 +289,7 @@ private fun GridContent(
 
 @Composable
 private fun ListContent(
-    games: List<GameEntity>, state: LibraryUiState, vm: LibraryViewModel,
+    games: List<GameEntity>, state: LibraryUiState,
     onOpenGame: (String) -> Unit, vm: LibraryViewModel,
 ) {
     LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
@@ -314,7 +311,7 @@ private fun ListContent(
 /** Shelf view: rows of covers resting on a subtle shelf edge, 3D tilt on. */
 @Composable
 private fun ShelfContent(
-    games: List<GameEntity>, state: LibraryUiState, vm: LibraryViewModel,
+    games: List<GameEntity>, state: LibraryUiState,
     onOpenGame: (String) -> Unit, vm: LibraryViewModel,
 ) {
     val rows = games.chunked(4)

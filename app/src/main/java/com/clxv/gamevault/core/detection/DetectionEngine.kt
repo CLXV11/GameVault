@@ -173,13 +173,13 @@ class DetectionEngine(private val reader: ByteReader? = null) {
         // N64: endianness magics at 0x0
         val w = h.readInt32BE(0)
         when (w) {
-            0x80371240 -> add(Platform.N64, 1.0f, "N64 big-endian magic (z64)")
-            0x40123780 -> add(Platform.N64, 1.0f, "N64 byte-swapped magic (n64)")
-            0x37804012 -> add(Platform.N64, 1.0f, "N64 little-endian magic (v64)")
+            0x80371240.toInt() -> add(Platform.N64, 1.0f, "N64 big-endian magic (z64)")
+            0x40123780.toInt() -> add(Platform.N64, 1.0f, "N64 byte-swapped magic (n64)")
+            0x37804012.toInt() -> add(Platform.N64, 1.0f, "N64 little-endian magic (v64)")
         }
 
         // GameCube / Wii share the 0xC2339F3D magic at 0x1C; size separates them reliably.
-        if (h.readInt32BE(0x1C) == 0xC2339F3D) {
+        if (h.readInt32BE(0x1C) == 0xC2339F3D.toInt()) {
             val isWii = s > 0x57058000L || ctx.ext == "wbfs" || ctx.ext == "rvz"
             if (isWii) add(Platform.WII, 0.95f, "GC/Wii disc magic + DVD-scale size")
             else add(Platform.GAMECUBE, 0.95f, "GameCube disc magic (0xC2339F3D)")
