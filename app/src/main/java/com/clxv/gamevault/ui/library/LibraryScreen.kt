@@ -184,9 +184,9 @@ fun LibraryScreen(
             } else if (sortedGames.isEmpty()) {
                 EmptyLibrary(onOpenSettings)
             } else when (state.view) {
-                LibraryView.GRID -> GridContent(sortedGames, state, vm, onOpenGame)
-                LibraryView.LIST -> ListContent(sortedGames, state, vm, onOpenGame)
-                LibraryView.SHELF -> ShelfContent(sortedGames, state, vm, onOpenGame)
+                LibraryView.GRID -> GridContent(sortedGames, state, onOpenGame, vm)
+                LibraryView.LIST -> ListContent(sortedGames, state, onOpenGame, vm)
+                LibraryView.SHELF -> ShelfContent(sortedGames, state, onOpenGame, vm)
             }
         }
 
