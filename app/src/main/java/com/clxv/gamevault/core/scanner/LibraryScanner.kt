@@ -46,6 +46,32 @@ class LibraryScanner @Inject constructor(
 
     fun cancel() { cancelled = true }
 
+    /** Non-game content the scanner must never turn into library entries. */
+    private val JUNK_EXTENSIONS = setOf(
+        // images
+        "jpg", "jpeg", "png", "gif", "webp", "bmp", "heic", "tif", "tiff", "svg",
+        // video / audio
+        "mp4", "mkv", "avi", "mov", "webm", "3gp", "mp3", "flac", "ogg", "wav", "m4a",
+        // documents / books
+        "pdf", "txt", "doc", "docx", "epub", "cbz", "cbr",
+        // scripts / programs / packages
+        "py", "sh", "js", "ts", "html", "css", "json", "exe", "msi", "apk", "jar",
+        // archives that are not game containers
+        "7z", "rar",
+    )
+
+    /** Extensions that identify game content even when the platform stays unknown. */
+    private val GAME_EXTENSIONS = setOf(
+        "nes", "fds", "sfc", "smc", "fig", "swc", "z64", "n64", "v64",
+        "gb", "gbc", "gba", "nds", "ids", "3ds", "cci", "cia", "cxi", "gcm",
+        "wbfs", "rvz", "wud", "wux", "rpx", "xci", "nsp", "nro", "nca",
+        "iso", "bin", "cue", "img", "mdf", "chd", "cdi", "gdi", "cso", "pbp", "pkg", "vpk",
+        "xbe", "xex", "zar", "md", "smd", "gen", "sms", "gg", "32x",
+        "adf", "adz", "ipf", "dms", "st", "msa", "tzx", "tap", "z80", "sna",
+        "pce", "sgx", "ngc", "ngp", "ws", "wsc", "a26", "lnx", "lyx", "j64", "jag",
+        "col", "cv", "int", "rom", "vec", "tgc", "sfo", "nrg",
+    )
+
     private val SKIPPED_DIRS = setOf(
         ".", "..", "android", "lost.dir", ".trash", ".cache", ".thumbnails", "music", "pictures", "dcim", "movies",
     )
@@ -116,6 +142,60 @@ class LibraryScanner @Inject constructor(
 
     private enum class ProcessResult { ADDED, UPDATED, SKIPPED }
 
+    /** Manually add one user-picked file to the library ("manual" pseudo-root). */
+    suspend fun addSingleFile(uri: Uri, title: String, platform: com.clxv.gamevault.core.model.Platform?) {
+        withContext(Dispatchers.IO) {
+            val name = queryDisplayName(uri) ?: uri.lastPathSegment ?: "file"
+            var size = 0L; var mtime = 0L
+            runCatching {
+                context.contentResolver.query(uri, null, null, null, null)?.use { c ->
+                    val si = c.getColumnIndex(android.provider.OpenableColumns.SIZE)
+                    val mi = c.getColumnIndex(android.provider.OpenableColumns.LAST_MODIFIED)
+                    if (c.moveToFirst()) {
+                        if (si >= 0) size = c.getLong(si)
+                        if (mi >= 0) mtime = c.getLong(mi)
+                    }
+                }
+            }
+            val engine = DetectionEngine(SafByteReader(context, uri))
+            val det = platform?.let {
+                com.clxv.gamevault.core.model.DetectionResult(
+                    platform = it, status = ScanStatus.MANUAL, confidence = 1f,
+                    format = name.substringAfterLast('.', "").uppercase(), region = engine.extractRegion(name),
+                )
+            } ?: engine.detect(name, if (size > 0) size else 1, emptyList())
+
+            val gameId = java.util.UUID.randomUUID().toString()
+            val finalTitle = title.ifBlank { engine.normalizeTitle(name) }
+            db.gameDao().upsertGame(com.clxv.gamevault.data.local.entity.GameEntity(
+                id = gameId, title = finalTitle,
+                normalizedTitle = finalTitle.lowercase(java.util.Locale.US),
+                platform = det.platform.name, region = det.region.name,
+                manualPlatform = platform != null,
+            ))
+            val hash = runCatching {
+                DuplicateFinder.quickHash(if (size > 0) size else 1) { off, len -> SafByteReader(context, uri).readAt(off, len) }
+            }.getOrDefault("unreadable")
+            db.gameDao().upsertFile(com.clxv.gamevault.data.local.entity.FileRecordEntity(
+                id = java.util.UUID.randomUUID().toString(), gameId = gameId, libraryRootId = "manual",
+                uri = uri.toString(), documentId = uri.lastPathSegment ?: uri.toString(),
+                displayPath = name, fileName = name,
+                extension = name.substringAfterLast('.', "").lowercase(java.util.Locale.US),
+                size = size, modifiedTime = mtime, format = det.format,
+                confidence = det.confidence, status = det.status.name,
+                detectionReasons = det.reasons.take(8).joinToString("\n"),
+                quickHash = hash,
+            ))
+        }
+    }
+
+    private fun queryDisplayName(uri: Uri): String? = runCatching {
+        context.contentResolver.query(uri, null, null, null, null)?.use { c ->
+            val i = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+            if (c.moveToFirst() && i >= 0) c.getString(i) else null
+        }
+    }.getOrNull()
+
     private suspend fun processFile(file: DocumentFile, root: LibraryRootEntity): ProcessResult {
         if (!file.isFile) return ProcessResult.SKIPPED
         val name = file.name ?: return ProcessResult.SKIPPED
@@ -137,9 +217,17 @@ class LibraryScanner @Inject constructor(
             // (Directory scans pair them below via buildGamesFromFiles.)
         }
 
+        // Never create library entries from junk (wallpapers, scripts, docs...).
+        if (ext in JUNK_EXTENSIONS) return ProcessResult.SKIPPED
+
         val parents = parentChain(file, root)
         val engine = DetectionEngine(SafByteReader(context, file.uri))
         val det = engine.detect(name, size, parents)
+
+        // Files with no identifying signal at all are not games — skip them.
+        if (det.status == ScanStatus.UNKNOWN && ext !in GAME_EXTENSIONS) {
+            return ProcessResult.SKIPPED
+        }
 
         val hash = runCatching {
             DuplicateFinder.quickHash(size) { off, len ->

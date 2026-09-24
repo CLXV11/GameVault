@@ -49,6 +49,7 @@ class LibraryViewModel @Inject constructor(
     ) { games, plat, favOnly, s, selection ->
         LibraryUiState(
             games = games
+                .filter { g -> s.showUnknown || g.platform != Platform.UNKNOWN.name }
                 .filter { g -> plat == null || g.platform == plat.name }
                 .filter { g -> !favOnly || g.favorite },
             query = query.value,
@@ -75,6 +76,8 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun hide(ids: List<String>) = viewModelScope.launch { repo.setHidden(ids, true); clearSelection() }
+    fun addManualGame(uri: android.net.Uri, title: String, platform: Platform?) =
+        viewModelScope.launch { scanner.addSingleFile(uri, title, platform) }
     fun removeFromLibrary(ids: List<String>) = viewModelScope.launch { repo.removeFromLibrary(ids); clearSelection() }
     fun addToCollection(collectionId: String, ids: List<String>) = viewModelScope.launch {
         repo.addToCollection(collectionId, ids)

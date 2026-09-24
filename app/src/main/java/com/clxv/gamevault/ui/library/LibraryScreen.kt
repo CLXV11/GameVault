@@ -46,6 +46,7 @@ fun LibraryScreen(
     val state by vm.ui.collectAsState()
     var sort by remember { mutableStateOf(SortMode.TITLE) }
     var showCollectionPicker by remember { mutableStateOf(false) }
+    var showAddGame by remember { mutableStateOf(false) }
 
     val sortedGames = remember(state.games, sort) {
         when (sort) {
@@ -58,6 +59,11 @@ fun LibraryScreen(
     }
 
     Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(onClick = { showAddGame = true }) {
+                Icon(Icons.Outlined.Add, stringResource(R.string.add_game_title))
+            }
+        },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.app_name)) },
@@ -226,6 +232,10 @@ fun LibraryScreen(
     }
 
     // Collection picker for batch add
+    if (showAddGame) {
+        AddGameDialog(scanner = vm.scanner, onDismiss = { showAddGame = false })
+    }
+
     if (showCollectionPicker) {
         CollectionPickerDialog(
             onDismiss = { showCollectionPicker = false },
@@ -271,7 +281,7 @@ private fun GridContent(
         columns = GridCells.Adaptive(minSize = (110 * state.coverScale).dp.coerceAtLeast(84.dp)),
         contentPadding = PaddingValues(16.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
+        verticalArrangement = Arrangement.spacedBy(26.dp),
     ) {
         items(games, key = { it.id }) { g ->
             GameCard(

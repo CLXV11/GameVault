@@ -81,4 +81,20 @@
     <string name="save_cover">حفظ الغلاف</string>
     <string name="cover_editor_hint">اختر صورة لاستخدامها كغلاف لهذه اللعبة. لن يتم تعديل الملف الأصلي أبدًا.</string>
     <string name="crop_hint">قرّب بإصبعين واسحب للتحريك</string>
+    <string name="add_game_title">أضف لعبة</string>
+    <string name="pick_file">اختر الملف</string>
+    <string name="game_title_hint">اسم اللعبة</string>
+    <string name="add_game_hint">اختر ملف لعبة — سيتعرف عليه GameVault تلقائيًا، ويمكنك تعديل الاسم.</string>
+    <string name="save_game">أضف إلى المكتبة</string>
+    <string name="auto_detected_x">تم التعرف: %1$s</string>
+    <string name="theme_color">لون التمييز</string>
+    <string name="theme_default">نيلي</string>
+    <string name="theme_emerald">زمردي</string>
+    <string name="theme_sunset">غروب</string>
+    <string name="theme_amethyst">جمشتي</string>
+    <string name="theme_graphite">غرافيت</string>
+    <string name="background">الخلفية</string>
+    <string name="bg_none">بدون خلفية</string>
+    <string name="clean_unknown">إزالة العناصر غير المعروفة</string>
+    <string name="clean_unknown_confirm">ستتم إزالة كل الألعاب التي تعذّر التعرف على منصتها. لن يتم تعديل الملفات نفسها.</string>
 </resources>

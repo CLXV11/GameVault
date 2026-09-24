@@ -21,6 +21,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.clxv.gamevault.R
+import com.clxv.gamevault.core.settings.ThemeColor
 import com.clxv.gamevault.core.settings.ThemeMode
 import com.clxv.gamevault.data.repository.GameRepository
 import com.clxv.gamevault.ui.components.formatBytes
@@ -49,6 +50,17 @@ fun SettingsScreen(
     val context = LocalContext.current
     var metaUrl by remember(state.settings.metadataProviderUrl) { mutableStateOf(state.settings.metadataProviderUrl) }
     var showHidden by remember { mutableStateOf(false) }
+    var confirmClean by remember { mutableStateOf(false) }
+    val backgrounds = listOf(
+        "none" to stringResource(R.string.bg_none),
+        "cloud_house.jpg" to "Cloud House",
+        "rain_street.jpg" to "Rain Street",
+        "canal_bridge.jpg" to "Canal Bridge",
+        "orbit.jpg" to "Orbit",
+        "stop_sign.jpg" to "Stop Sign",
+        "knight_rest.jpg" to "Knight",
+        "sakura_pikachu.jpg" to "Sakura",
+    )
 
     val treeLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
@@ -167,6 +179,42 @@ fun SettingsScreen(
                 }
             }
 
+            item { SectionTitle(stringResource(R.string.theme_color)) }
+            item {
+                Row {
+                    ThemeColor.entries.forEach { c ->
+                        FilterChip(
+                            selected = state.settings.themeColor == c,
+                            onClick = { vm.setThemeColor(c) },
+                            label = { Text(stringResource(when (c) {
+                                ThemeColor.DEFAULT -> R.string.theme_default
+                                ThemeColor.EMERALD -> R.string.theme_emerald
+                                ThemeColor.SUNSET -> R.string.theme_sunset
+                                ThemeColor.AMETHYST -> R.string.theme_amethyst
+                                ThemeColor.GRAPHITE -> R.string.theme_graphite
+                            }), maxLines = 1) },
+                            modifier = Modifier.padding(end = 6.dp),
+                        )
+                    }
+                }
+            }
+            item { SectionTitle(stringResource(R.string.background)) }
+            item {
+                androidx.compose.foundation.lazy.LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items(backgrounds.size) { i ->
+                        val (file, label) = backgrounds[i]
+                        val selected = state.settings.background == file
+                        FilterChip(
+                            selected = selected,
+                            onClick = { vm.setBackground(file) },
+                            label = { Text(label, maxLines = 1) },
+                        )
+                    }
+                }
+            }
+
             item { SectionTitle(stringResource(R.string.metadata_provider)) }
             item {
                 Text(stringResource(R.string.metadata_provider_hint),
@@ -205,7 +253,27 @@ fun SettingsScreen(
                     Text(stringResource(R.string.hidden_games))
                 }
             }
+            item {
+                OutlinedButton(
+                    onClick = { confirmClean = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(R.string.clean_unknown)) }
+            }
         }
+    }
+
+    if (confirmClean) {
+        AlertDialog(
+            onDismissRequest = { confirmClean = false },
+            title = { Text(stringResource(R.string.clean_unknown)) },
+            text = { Text(stringResource(R.string.clean_unknown_confirm)) },
+            confirmButton = {
+                TextButton(onClick = { vm.cleanUnknown(); confirmClean = false }) {
+                    Text(stringResource(R.string.remove), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmClean = false }) { Text(stringResource(R.string.cancel)) } },
+        )
     }
 
     if (showHidden) {

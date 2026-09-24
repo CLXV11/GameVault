@@ -81,4 +81,20 @@
     <string name="save_cover">Save cover</string>
     <string name="cover_editor_hint">Choose an image to use as this game\'s cover. The original file is never modified.</string>
     <string name="crop_hint">Pinch to zoom, drag to position</string>
+    <string name="add_game_title">Add game</string>
+    <string name="pick_file">Pick file</string>
+    <string name="game_title_hint">Game title</string>
+    <string name="add_game_hint">Choose a game file — GameVault will identify it automatically. You can edit the title.</string>
+    <string name="save_game">Add to library</string>
+    <string name="auto_detected_x">Detected: %1$s</string>
+    <string name="theme_color">Accent color</string>
+    <string name="theme_default">Indigo</string>
+    <string name="theme_emerald">Emerald</string>
+    <string name="theme_sunset">Sunset</string>
+    <string name="theme_amethyst">Amethyst</string>
+    <string name="theme_graphite">Graphite</string>
+    <string name="background">Background</string>
+    <string name="bg_none">No wallpaper</string>
+    <string name="clean_unknown">Remove unknown entries</string>
+    <string name="clean_unknown_confirm">All games whose platform could not be identified will be removed. Files on storage are not touched.</string>
 </resources>

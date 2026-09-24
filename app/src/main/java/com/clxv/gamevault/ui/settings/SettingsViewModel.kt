@@ -48,6 +48,9 @@ class SettingsViewModel @Inject constructor(
     fun setGyro(b: Boolean) = viewModelScope.launch { settingsManager.setGyroTilt(b) }
     fun setMetadataEnabled(b: Boolean) = viewModelScope.launch { settingsManager.setMetadataEnabled(b) }
     fun setMetadataUrl(u: String) = viewModelScope.launch { settingsManager.setMetadataUrl(u) }
+    fun setThemeColor(c: com.clxv.gamevault.core.settings.ThemeColor) = viewModelScope.launch { settingsManager.setThemeColor(c) }
+    fun setBackground(b: String) = viewModelScope.launch { settingsManager.setBackground(b) }
+    fun cleanUnknown() = viewModelScope.launch { db.gameDao().deleteUnknownGames() }
 
     fun addRoot(uri: android.net.Uri, displayName: String) = viewModelScope.launch {
         db.libraryRootDao().add(LibraryRootEntity(UUID.randomUUID().toString(), uri.toString(), displayName))

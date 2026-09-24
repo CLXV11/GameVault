@@ -61,6 +61,9 @@ interface GameDao {
     @Query("DELETE FROM games WHERE id IN (:ids)")
     suspend fun deleteGames(ids: List<String>)
 
+    @Query("DELETE FROM games WHERE platform = 'UNKNOWN'")
+    suspend fun deleteUnknownGames()
+
     // ---------------- Files ----------------
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

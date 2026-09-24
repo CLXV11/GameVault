@@ -56,6 +56,9 @@ class GameRepository @Inject constructor(private val db: AppDatabase) {
     }
 
     /** Removes games and their file records; never touches the actual files on disk. */
+    /** Removes every game whose platform could not be identified (junk cleanup). */
+    suspend fun removeUnknownGames() = db.gameDao().deleteUnknownGames()
+
     suspend fun removeFromLibrary(ids: List<String>) {
         db.collectionDao().removeGamesFromAll(ids)
         db.gameDao().deleteGamesWithFiles(ids)

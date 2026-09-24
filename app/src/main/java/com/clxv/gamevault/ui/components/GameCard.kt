@@ -82,7 +82,7 @@ fun GameCard(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Cover3D(coverModel = coverModel, width = 52.dp, enabled = false, showBack = false)
+                Cover3D(coverModel = coverModel, width = 52.dp, enabled = false)
                 Spacer(Modifier.width(16.dp))
                 Column(Modifier.weight(1f)) {
                     Text(game.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)

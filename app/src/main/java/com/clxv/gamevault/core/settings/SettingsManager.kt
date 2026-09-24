@@ -16,6 +16,7 @@ private val Context.dataStore by preferencesDataStore(name = "settings")
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 enum class LibraryView { GRID, LIST, SHELF }
+enum class ThemeColor { DEFAULT, EMERALD, SUNSET, AMETHYST, GRAPHITE }
 
 data class AppSettings(
     val theme: ThemeMode = ThemeMode.SYSTEM,
@@ -25,6 +26,8 @@ data class AppSettings(
     val gyroTilt: Boolean = true,
     val metadataProviderEnabled: Boolean = false,   // OFF unless the user configures one
     val metadataProviderUrl: String = "",
+    val themeColor: ThemeColor = ThemeColor.DEFAULT,
+    val background: String = "none",   // "none" or an asset file name in backgrounds/
 )
 
 @Singleton
@@ -40,6 +43,8 @@ class SettingsManager @Inject constructor(@ApplicationContext context: Context) 
         val GYRO = booleanPreferencesKey("gyro_tilt")
         val META_ENABLED = booleanPreferencesKey("meta_enabled")
         val META_URL = stringPreferencesKey("meta_url")
+        val THEME_COLOR = stringPreferencesKey("theme_color")
+        val BACKGROUND = stringPreferencesKey("background")
     }
 
     val settings: Flow<AppSettings> = ds.data.map { p ->
@@ -51,6 +56,8 @@ class SettingsManager @Inject constructor(@ApplicationContext context: Context) 
             gyroTilt = p[Keys.GYRO] ?: true,
             metadataProviderEnabled = p[Keys.META_ENABLED] ?: false,
             metadataProviderUrl = p[Keys.META_URL] ?: "",
+            themeColor = runCatching { ThemeColor.valueOf(p[Keys.THEME_COLOR] ?: "DEFAULT") }.getOrDefault(ThemeColor.DEFAULT),
+            background = p[Keys.BACKGROUND] ?: "none",
         )
     }
 
@@ -61,4 +68,6 @@ class SettingsManager @Inject constructor(@ApplicationContext context: Context) 
     suspend fun setGyroTilt(b: Boolean) = ds.edit { it[Keys.GYRO] = b }
     suspend fun setMetadataEnabled(b: Boolean) = ds.edit { it[Keys.META_ENABLED] = b }
     suspend fun setMetadataUrl(u: String) = ds.edit { it[Keys.META_URL] = u }
+    suspend fun setThemeColor(c: ThemeColor) = ds.edit { it[Keys.THEME_COLOR] = c.name }
+    suspend fun setBackground(b: String) = ds.edit { it[Keys.BACKGROUND] = b }
 }
