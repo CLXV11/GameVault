@@ -40,6 +40,7 @@ fun platformIconRes(p: Platform): Int = when (p) {
     Platform.MEGA_DRIVE -> R.drawable.platform_mega_drive
     Platform.MASTER_SYSTEM -> R.drawable.platform_master_system
     Platform.GAME_GEAR -> R.drawable.platform_game_gear
+    Platform.SEGA_CD -> R.drawable.platform_sega_cd
     Platform.THIRTY_TWO_X -> R.drawable.platform_thirty_two_x
     Platform.THREE_DO -> R.drawable.platform_three_do
     Platform.PHILIPS_CDI -> R.drawable.platform_philips_cdi

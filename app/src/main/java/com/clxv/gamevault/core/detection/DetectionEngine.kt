@@ -276,6 +276,7 @@ class DetectionEngine(private val reader: ByteReader? = null) {
     private fun checkContainers(ctx: Ctx, addRaw: (Platform, Float, String) -> Unit) {
         val add: (Platform, Float, String) -> Unit = { p, sc, r -> addRaw(p, sc.coerceAtMost(0.9f), r) }
         val addWeak = addRaw
+        val addStrong = add
         val h = ctx.head(0x1000) ?: return
         when {
             // WBFS: Wii-only container

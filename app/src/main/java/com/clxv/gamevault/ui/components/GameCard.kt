@@ -117,7 +117,7 @@ fun GameCard(
         com.clxv.gamevault.core.settings.LibraryView.SHELF -> {
             // Shelf mode renders handled by the shelf composable in LibraryScreen;
             // this branch is unused but keeps the exhaustive when cheap.
-            GridCardFallback(game, coverModel, width, selected, onClick, onLongClick, modifier)
+            GridCardFallback(game, coverModel, width, selected, cover3d, onClick, onLongClick, modifier)
         }
     }
 }
@@ -125,7 +125,7 @@ fun GameCard(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun GridCardFallback(
-    game: GameEntity, coverModel: CoverModel, width: Dp, selected: Boolean,
+    game: GameEntity, coverModel: CoverModel, width: Dp, selected: Boolean, cover3d: Boolean,
     onClick: () -> Unit, onLongClick: () -> Unit, modifier: Modifier,
 ) {
     Column(modifier = modifier.width(width).combinedClickable(onClick = onClick, onLongClick = onLongClick)) {

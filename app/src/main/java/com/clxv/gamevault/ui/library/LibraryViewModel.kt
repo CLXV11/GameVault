@@ -46,24 +46,34 @@ class LibraryViewModel @Inject constructor(
         if (q.isBlank()) repo.observeLibrary() else repo.search(q)
     }
 
-    val ui: StateFlow<LibraryUiState> = combine(
-        gamesFlow, query, platformFilter, favoritesOnly, settings.settings, _selection,
-    ) { games, q, plat, favOnly, s, selection ->
+    private data class Core(
+        val games: List<com.clxv.gamevault.data.local.entity.GameEntity>,
+        val q: String,
+        val plat: Platform?,
+        val favOnly: Boolean,
+        val s: com.clxv.gamevault.core.settings.AppSettings,
+    )
+
+    private val core = combine(
+        gamesFlow, query, platformFilter, favoritesOnly, settings.settings,
+    ) { games, q, plat, favOnly, s -> Core(games, q, plat, favOnly, s) }
+
+    val ui: StateFlow<LibraryUiState> = combine(core, _selection) { c, selection ->
         LibraryUiState(
-            games = games
-                .filter { g -> s.showUnknown || g.platform != Platform.UNKNOWN.name }
-                .filter { g -> plat == null || g.platform == plat.name }
-                .filter { g -> !favOnly || g.favorite },
-            query = q,
-            platformFilter = plat,
-            favoritesOnly = favOnly,
-            view = s.view,
-            coverScale = s.coverScale,
-            showUnknown = s.showUnknown,
-            cover3d = s.cover3d,
+            games = c.games
+                .filter { g -> c.s.showUnknown || g.platform != Platform.UNKNOWN.name }
+                .filter { g -> c.plat == null || g.platform == c.plat.name }
+                .filter { g -> !c.favOnly || g.favorite },
+            query = c.q,
+            platformFilter = c.plat,
+            favoritesOnly = c.favOnly,
+            view = c.s.view,
+            coverScale = c.s.coverScale,
+            showUnknown = c.s.showUnknown,
+            cover3d = c.s.cover3d,
             selection = selection,
             loading = false,
-            platformsPresent = games.map { Platform.valueOf(it.platform) }.distinct().sortedBy { it.label },
+            platformsPresent = c.games.map { Platform.valueOf(it.platform) }.distinct().sortedBy { it.label },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LibraryUiState())
 
