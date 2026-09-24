@@ -320,7 +320,9 @@ class DetectionEngine(private val reader: ByteReader? = null) {
     }
 
     /** Disc sniffing: bounded scans for structure strings, never whole-file reads. */
-    private fun checkDiscStructures(ctx: Ctx, add: (Platform, Float, String) -> Unit) {   // strong layer
+    private fun checkDiscStructures(ctx: Ctx, addRaw: (Platform, Float, String) -> Unit) {
+        val add = addRaw           // structural evidence stands on its own (max, not summed)
+        val addStrong = addRaw
         val h = ctx.head(0x10000) ?: return
         // ISO9660 primary volume descriptor at sector 16: 0x01 'C' 'D' '0' '0' '1'
         val isIso = h.size > 0x8006 && h[0x8000] == 0x01.toByte() &&
