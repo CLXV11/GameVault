@@ -134,13 +134,15 @@ fun CoverEditorScreen(
                             onClick = {
                                 val out = preview ?: return@TextButton
                                 saving = true
+                                // Stay on screen until the cover is fully persisted —
+                                // leaving early used to cancel the save mid-flight.
                                 scope.launch {
                                     vm.saveCustomCover(out)
                                     saving = false
                                     onBack()
                                 }
                             },
-                        ) { Text(stringResource(R.string.save_cover)) }
+                        ) { Text(if (saving) "…" else stringResource(R.string.save_cover)) }
                     }
                 },
             )
@@ -155,7 +157,9 @@ fun CoverEditorScreen(
                     picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                 }) { Text(stringResource(R.string.pick_image)) }
                 Spacer(Modifier.height(12.dp))
-                TextButton(onClick = { vm.resetCover(); onBack() }) {
+                TextButton(onClick = {
+                    scope.launch { vm.resetCover(); onBack() }
+                }) {
                     Text(stringResource(R.string.reset_cover), color = MaterialTheme.colorScheme.error)
                 }
                 Spacer(Modifier.weight(1f))

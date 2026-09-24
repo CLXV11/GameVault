@@ -77,15 +77,7 @@ fun Cover3D(
             .clipToBounds(),
         contentAlignment = Alignment.Center,
     ) {
-        // Soft drop shadow
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .offset(y = 7.dp)
-                .blur(12.dp)
-                .alpha(0.35f)
-                .background(Color.Black, corner),
-        )
+        // No frame, no shadow — the cover image floats directly on the wallpaper.
 
         // Tilt body (spine + front), clipped to the cover bounds
         Box(
@@ -156,45 +148,20 @@ private fun CoverFace(
             .background(Brush.verticalGradient(listOf(c1, c2))),
     ) {
         if (bitmap != null) {
+            // Cover art only — no frame, nothing else
             Image(
                 bitmap = bitmap, contentDescription = title,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
         } else {
-            // "?" placeholder — shown when no cover exists yet
+            // Clean "?" placeholder — gradient + glyph only
             Text(
                 text = "?",
                 style = MaterialTheme.typography.displaySmall,
                 color = Color.White.copy(alpha = 0.30f),
                 modifier = Modifier.align(Alignment.Center),
             )
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f))))
-                    .let { m -> m },
-            )
-            Surface(
-                color = Color.Black.copy(alpha = 0.35f),
-                shape = MaterialTheme.shapes.small,
-                modifier = Modifier.align(Alignment.TopStart).offset(8.dp, 8.dp),
-            ) {
-                Text(
-                    text = platformShort,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Color.White,
-                    modifier = Modifier.offset(x = 6.dp, y = 3.dp)
-                        .let { m -> m },
-                )
-            }
         }
     }
 }

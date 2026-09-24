@@ -211,6 +211,24 @@ class DetectionEngineTest {
     }
 
     @Test
+    fun ps1BootSectorDetected() {
+        val buf = ByteArray(0x20000)
+        put(buf, 0, "BOOT")
+        put(buf, 0x4000, "Sony Computer Entertainment")
+        val d = detect(buf, "Fear Effect (Disc 1).bin", 464_000_000L)
+        assertEquals(Platform.PS1, d.platform)
+        assertEquals(ScanStatus.DETECTED, d.status)
+    }
+
+    @Test
+    fun rootFolderNameClassifiesBin() {
+        val buf = ByteArray(0x1000)
+        val d = detect(buf, "Tenchu 2 - Birth of the Stealth Assassins.bin", 709_000_000L,
+                       parents = listOf("ps1"))
+        assertEquals(Platform.PS1, d.platform)
+    }
+
+    @Test
     fun regionTagsParsed() {
         val e = DetectionEngine()
         assertEquals(Region.USA, e.extractRegion("Crash (USA).iso"))

@@ -168,8 +168,9 @@ fun FlatCover(
     val (c1, c2) = coverModel.placeholderColors
     Surface(
         shape = MaterialTheme.shapes.medium,
-        tonalElevation = 2.dp,
-        shadowElevation = 4.dp,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+        color = Color.Transparent,
         modifier = modifier.width(width),
     ) {
         Box(
@@ -191,18 +192,6 @@ fun FlatCover(
                     "?", style = MaterialTheme.typography.headlineMedium,
                     color = Color.White.copy(alpha = 0.35f),
                     modifier = Modifier.align(Alignment.Center),
-                )
-                Text(
-                    coverModel.title,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Color.White,
-                    maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .background(androidx.compose.ui.graphics.Brush.verticalGradient(
-                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f))))
-                        .padding(horizontal = 6.dp, vertical = 4.dp)
-                        .fillMaxWidth(),
                 )
             }
         }

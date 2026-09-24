@@ -43,15 +43,20 @@ class GameDetailViewModel @Inject constructor(
     fun rename(newTitle: String) = viewModelScope.launch { repo.renameTitle(gameId, newTitle) }
     fun setNotes(n: String) = viewModelScope.launch { repo.setNotes(gameId, n) }
 
-    fun saveCustomCover(bitmap: android.graphics.Bitmap) = viewModelScope.launch {
+    /** Suspends until the cover is persisted — callers must stay on screen until done. */
+    suspend fun saveCustomCover(bitmap: android.graphics.Bitmap): Boolean = runCatching {
         val path = coverManager.saveCustomCover(gameId, bitmap)
-        game.value?.let { repo.updateGame(it.game.copy(customCoverPath = path)) }
-    }
+        val g = game.value?.game ?: return@runCatching false
+        repo.updateGame(g.copy(customCoverPath = path))
+        true
+    }.getOrDefault(false)
 
-    fun resetCover() = viewModelScope.launch {
+    suspend fun resetCover(): Boolean = runCatching {
         coverManager.resetCover(gameId)
-        game.value?.let { repo.updateGame(it.game.copy(customCoverPath = null)) }
-    }
+        val g = game.value?.game ?: return@runCatching false
+        repo.updateGame(g.copy(customCoverPath = null))
+        true
+    }.getOrDefault(false)
 
     fun hide() = viewModelScope.launch { repo.setHidden(listOf(gameId), true) }
     fun deleteFromLibrary() = viewModelScope.launch { repo.removeFromLibrary(listOf(gameId)) }

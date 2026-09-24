@@ -214,6 +214,11 @@ class DetectionEngine(private val reader: ByteReader? = null) {
             add(Platform.SWITCH, 1.0f, "NCA content archive")
         }
 
+        // PS1 raw data track: boot sector starts with "BOOT" (gated by CD size)
+        if (h.startsWithAt(0, ascii("BOOT")) && s < 900_000_000L) {
+            addStrong(Platform.PS1, 0.9f, "PS1 boot sector")
+        }
+
         // N64: endianness magics at 0x0
         val w = h.readInt32BE(0)
         when (w) {
@@ -346,8 +351,17 @@ class DetectionEngine(private val reader: ByteReader? = null) {
             return
         }
 
-        // Non-ISO disc images: cue/bin, gdi, cdi
+        // Non-ISO disc images: cue/bin, gdi, cdi — sniff real content first
         val deep = ctx.head() ?: return
+        // PS1 executables carry the "PS-X EXE" signature; the licence string lives on
+        // Sony discs regardless of whether an ISO9660 PVD was readable.
+        if (deep.indexOfSub(ascii("PS-X EXE")) >= 0) {
+            addStrong(Platform.PS1, 0.85f, "PS-X EXE signature")
+        }
+        if (deep.indexOfSub(ascii("Sony Computer Entertainment")) >= 0) {
+            if (ctx.size > 1_000_000_000L) addStrong(Platform.PS2, 0.85f, "Sony licence string + DVD size")
+            else addStrong(Platform.PS1, 0.85f, "Sony licence string + CD size")
+        }
         when {
             deep.indexOfSub(ascii("SEGA SEGAKATANA")) >= 0 || deep.indexOfSub(ascii("SEGADISCSYSTEM")) >= 0 ->
                 add(Platform.DREAMCAST, 0.95f, "Dreamcast IP.BN boot sector")

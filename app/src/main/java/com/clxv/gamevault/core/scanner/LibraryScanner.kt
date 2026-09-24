@@ -239,7 +239,8 @@ class LibraryScanner @Inject constructor(
         // Never create library entries from junk (wallpapers, scripts, docs...).
         if (ext in JUNK_EXTENSIONS) return ProcessResult.SKIPPED
 
-        val parents = parentChain(file, root)
+        // The root folder's own name is a platform signal too ("ps1", "Wii", ...)
+        val parents = listOf(root.displayName) + parentChain(file, root)
         val engine = DetectionEngine(SafByteReader(context, file.uri))
         val det = engine.detect(name, size, parents)
 
