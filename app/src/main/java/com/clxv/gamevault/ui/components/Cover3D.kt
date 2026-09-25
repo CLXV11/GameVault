@@ -11,8 +11,10 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -109,10 +111,11 @@ fun Cover3D(
                     },
             )
         } else {
-            // Minimal "?" placeholder: soft gradient + glyph, nothing else
+            // Minimal "?" placeholder: soft gradient + glyph (fixed 3:4 body)
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
+                    .aspectRatio(aspect)
                     .clip(corner)
                     .background(Brush.verticalGradient(listOf(Color(c1), Color(c2)))),
             ) {
