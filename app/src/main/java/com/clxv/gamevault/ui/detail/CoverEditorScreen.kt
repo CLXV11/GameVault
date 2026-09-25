@@ -112,6 +112,7 @@ fun CoverEditorScreen(
         val w = win; if (w.width == 0 || w.height == 0) return@produceState
         value = withContext(Dispatchers.Default) {
             runCatching { computeCrop(src, w, scale, offset, fill) }.getOrNull()
+                ?: Bitmap.createScaledBitmap(src, 240, (src.height * 240f / src.width).toInt().coerceAtLeast(1), true)
         }
     }
 
@@ -134,18 +135,22 @@ fun CoverEditorScreen(
                             offset = Offset.Zero; scale = 1f
                         }) { Icon(Icons.AutoMirrored.Filled.RotateRight, stringResource(R.string.rotate)) }
                         TextButton(
-                            enabled = !saving && preview != null,
+                            enabled = !saving && source != null && win.width > 0,
                             onClick = {
-                                val out = preview ?: return@TextButton
+                                val src = source ?: return@TextButton
+                                val w = win
+                                if (w.width == 0) return@TextButton
                                 saving = true
-                                // Stay on screen until the cover is fully persisted —
-                                // leaving early used to cancel the save mid-flight.
-                                scope.launch {
-                                    // Fully finish (file write + DB update) before leaving;
-                                    // the button shows "…" and the screen stays put meanwhile.
-                                    val ok = runCatching { vm.saveCustomCover(out) }.getOrDefault(false)
-                                    saving = false
-                                    if (ok) onBack()
+                                // Compute the crop here and now (no dependency on the
+                                // async preview), persist fully, then leave.
+                                scope.launch(kotlinx.coroutines.Dispatchers.Default) {
+                                    val bmp = runCatching { computeCrop(src, w, scale, offset, fill) }
+                                        .getOrNull() ?: src
+                                    val ok = runCatching { vm.saveCustomCover(bmp) }.getOrDefault(false)
+                                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                        saving = false
+                                        if (ok) onBack()
+                                    }
                                 }
                             },
                         ) { Text(if (saving) "…" else stringResource(R.string.save_cover)) }
@@ -195,6 +200,7 @@ fun CoverEditorScreen(
                             .background(Color.Black),
                     ) {
                         val transform = rememberTransformableState { zoom, pan, _ ->
+                            if (win.width == 0 || win.height == 0) return@rememberTransformableState
                             val fit = fitScale(src, win)
                             val fillS = fillScale(src, win)
                             val minS = if (fill) fillS / fit else 1f
@@ -265,17 +271,22 @@ private fun clampOffset(o: Offset, bmp: Bitmap, win: IntSize, eff: Float): Offse
     return Offset(o.x.coerceIn(-maxX, maxX), o.y.coerceIn(-maxY, maxY))
 }
 
-/** The exact crop that will be persisted, derived from the same math as the preview. */
+/**
+ * The exact crop that will be persisted.
+ * The image is drawn centered (ContentScale.Fit) then scaled about its center
+ * and translated, so the visible window in image pixels is:
+ *   left = (dispW - winW)/2 - offset.x,  normalized by (fit * userScale)
+ */
 private fun computeCrop(src: Bitmap, win: IntSize, scale: Float, offset: Offset, fill: Boolean): Bitmap {
     val fit = fitScale(src, win)
     val eff = fit * scale
-    val leftPx = (win.width - src.width * eff) / 2f + offset.x
-    val topPx = (win.height - src.height * eff) / 2f + offset.y
-    val wPx = win.width / eff
-    val hPx = win.height / eff
+    val dispW = src.width * eff
+    val dispH = src.height * eff
+    val leftPx = (dispW - win.width) / 2f - offset.x
+    val topPx = (dispH - win.height) / 2f - offset.y
     val x = (leftPx / eff).toInt().coerceIn(0, src.width - 1)
     val y = (topPx / eff).toInt().coerceIn(0, src.height - 1)
-    val w = wPx.toInt().coerceIn(1, src.width - x)
-    val h = hPx.toInt().coerceIn(1, src.height - y)
+    val w = (win.width / eff).toInt().coerceIn(1, src.width - x)
+    val h = (win.height / eff).toInt().coerceIn(1, src.height - y)
     return Bitmap.createBitmap(src, x, y, w, h)
 }

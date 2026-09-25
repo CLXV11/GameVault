@@ -143,15 +143,6 @@ fun LibraryScreen(
                 }
             }
 
-            if (state.recent.isNotEmpty() && state.query.isBlank()) {
-                RecentRow(
-                    games = state.recent,
-                    cover3d = state.cover3d,
-                    coverModel = { vm.coverModel(it) },
-                    onOpen = onOpenGame,
-                )
-            }
-
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -167,7 +158,11 @@ fun LibraryScreen(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Row {
+                Surface(
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                    shape = RoundedCornerShape(50),
+                ) {
+                Row(Modifier.padding(horizontal = 4.dp)) {
                     // sort menu
                     var sortMenu by remember { mutableStateOf(false) }
                     Box {
@@ -218,6 +213,7 @@ fun LibraryScreen(
                             stringResource(R.string.view_mode),
                         )
                     }
+                }
                 }
             }
 
@@ -353,7 +349,7 @@ private fun GridContent(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalArrangement = Arrangement.spacedBy(22.dp),
     ) {
-        items(games, key = { it.id }) { g ->
+        items(games, key = { it.id }, contentType = { "game" }) { g ->
             GameCard(
                 game = g,
                 coverModel = vm.coverModel(g),
@@ -376,7 +372,7 @@ private fun ListContent(
     onOpenGame: (String) -> Unit, vm: LibraryViewModel,
 ) {
     LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
-        items(games, key = { it.id }) { g ->
+        items(games, key = { it.id }, contentType = { "game" }) { g ->
             GameCard(
                 game = g,
                 coverModel = vm.coverModel(g),
@@ -472,46 +468,5 @@ private fun EmptyLibrary(onOpenSettings: () -> Unit) {
         )
         Spacer(Modifier.height(16.dp))
         Button(onClick = onOpenSettings) { Text(stringResource(R.string.open_settings)) }
-    }
-}
-
-
-/** Horizontal rail of recently viewed games. */
-@Composable
-private fun RecentRow(
-    games: List<com.clxv.gamevault.data.local.entity.GameEntity>,
-    cover3d: Boolean,
-    coverModel: (com.clxv.gamevault.data.local.entity.GameEntity) -> com.clxv.gamevault.ui.components.CoverModel,
-    onOpen: (String) -> Unit,
-) {
-    Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
-        Text(
-            stringResource(R.string.recent_viewed),
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        )
-        androidx.compose.foundation.lazy.LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            items(games, key = { "recent_" + it.id }) { g ->
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.width(76.dp).clickable { onOpen(g.id) },
-                ) {
-                    if (cover3d) com.clxv.gamevault.ui.components.Cover3D(
-                        coverModel = coverModel(g), width = 76.dp, enabled = false,
-                    ) else com.clxv.gamevault.ui.components.FlatCover(
-                        coverModel = coverModel(g), width = 76.dp,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        g.title, style = MaterialTheme.typography.labelMedium,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-        }
     }
 }

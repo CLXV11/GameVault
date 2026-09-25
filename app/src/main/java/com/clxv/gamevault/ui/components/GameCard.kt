@@ -71,13 +71,14 @@ fun GameCard(
                     if (isNew) {
                         Surface(
                             color = MaterialTheme.colorScheme.primary,
+                            contentColor = Color.White,
                             shape = RoundedCornerShape(bottomEnd = 8.dp),
                             modifier = Modifier.align(Alignment.TopStart),
                         ) {
                             Text(
                                 stringResource(R.string.new_badge),
                                 style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onPrimary,
+                                color = Color.White,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             )
                         }
@@ -183,21 +184,23 @@ fun FlatCover(
         initialValue = null, coverModel.customCoverPath,
     ) {
         value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            com.clxv.gamevault.ui.components.decodeCoverBitmap(coverModel.customCoverPath)
+            runCatching { com.clxv.gamevault.ui.components.decodeCoverBitmap(coverModel.customCoverPath) }
+                .getOrNull()
         }
     }
     val (c1, c2) = coverModel.placeholderColors
     Box(
         modifier = modifier
             .width(width)
-            .aspectRatio(3f / 4f)
+            .wrapContentHeight()
             .clip(MaterialTheme.shapes.medium),
     ) {
         if (frontBitmap != null) {
+            // Natural size/aspect — nothing added, nothing cropped.
             Image(
                 bitmap = frontBitmap!!, contentDescription = coverModel.title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxWidth(),
             )
         } else {
             Box(

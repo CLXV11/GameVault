@@ -68,18 +68,19 @@ fun Cover3D(
     Box(
         modifier = modifier
             .width(width)
-            .height(width / aspect)
+            .wrapContentHeight()
             .clipToBounds(),
         contentAlignment = Alignment.Center,
     ) {
         if (frontBitmap != null) {
-            // The cover art alone — transparent everywhere around it
+            // The cover art, exactly as provided: natural aspect, transparent
+            // margins show the wallpaper — no cropping, no stretching, no frame.
             Image(
                 bitmap = frontBitmap!!,
                 contentDescription = coverModel.title,
-                contentScale = ContentScale.Crop,
+                contentScale = ContentScale.Fit,
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
                     .clip(corner)
                     .graphicsLayer {
                         rotationY = rotY.value
@@ -133,14 +134,16 @@ data class CoverModel(
     val placeholderColors: Pair<Long, Long>,
 )
 
-/** Sampled decode so full-size JPEGs never hit the main thread unscaled. */
-internal fun decodeCoverBitmap(path: String?, targetWidth: Int = 420): ImageBitmap? {
-    if (path == null || !File(path).exists()) return null
-    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-    BitmapFactory.decodeFile(path, bounds)
-    if (bounds.outWidth <= 0) return null
-    var sample = 1
-    while (bounds.outWidth / (sample * 2) > targetWidth) sample *= 2
-    val opts = BitmapFactory.Options().apply { inSampleSize = sample }
-    return BitmapFactory.decodeFile(path, opts)?.asImageBitmap()
-}
+/** Sampled decode so full-size images never hit the main thread unscaled.
+ *  Never throws: corrupt/missing files simply yield null. */
+internal fun decodeCoverBitmap(path: String?, targetWidth: Int = 420): ImageBitmap? =
+    runCatching {
+        if (path == null || !File(path).exists()) return@runCatching null
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(path, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@runCatching null
+        var sample = 1
+        while (bounds.outWidth / (sample * 2) > targetWidth) sample *= 2
+        val opts = BitmapFactory.Options().apply { inSampleSize = sample }
+        BitmapFactory.decodeFile(path, opts)?.asImageBitmap()
+    }.getOrNull()

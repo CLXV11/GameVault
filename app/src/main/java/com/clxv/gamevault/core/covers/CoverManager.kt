@@ -29,27 +29,35 @@ class CoverManager @Inject constructor(@ApplicationContext private val context: 
     private val coversDir: File get() = File(context.filesDir, "covers").apply { mkdirs() }
     private val thumbsDir: File get() = File(context.cacheDir, "thumbs").apply { mkdirs() }
 
-    fun customCoverFile(gameId: String): File = File(coversDir, "$gameId.jpg")
+    fun customCoverFile(gameId: String): File = File(coversDir, "$gameId.png")
 
-    fun hasCustomCover(gameId: String): Boolean = customCoverFile(gameId).exists()
+    /** Legacy JPEG path — kept only so old opaque covers can be removed/replaced. */
+    private fun legacyCoverFile(gameId: String): File = File(coversDir, "$gameId.jpg")
 
-    /** Persist an edited bitmap as this game's custom cover. Returns the file path. */
-    suspend fun saveCustomCover(gameId: String, bitmap: Bitmap): String = withContext(Dispatchers.IO) {
-        val scaled = Bitmap.createScaledBitmap(
-            bitmap,
-            COVER_WIDTH,
-            (bitmap.height.toFloat() / bitmap.width * COVER_WIDTH).toInt().coerceIn(1, COVER_HEIGHT * 2),
-            true,
-        )
-        val out = customCoverFile(gameId)
-        FileOutputStream(out).use { scaled.compress(Bitmap.CompressFormat.JPEG, 90, it) }
-        // Invalidate any cached thumbnail.
-        File(thumbsDir, "$gameId.jpg").delete()
-        out.absolutePath
+    fun hasCustomCover(gameId: String): Boolean =
+        customCoverFile(gameId).exists() || legacyCoverFile(gameId).exists()
+
+    /** Persist an edited bitmap as this game's custom cover. Never throws. */
+    suspend fun saveCustomCover(gameId: String, bitmap: Bitmap): String? = withContext(Dispatchers.IO) {
+        runCatching {
+            val scaled = Bitmap.createScaledBitmap(
+                bitmap,
+                COVER_WIDTH,
+                (bitmap.height.toFloat() / bitmap.width * COVER_WIDTH).toInt().coerceIn(1, COVER_HEIGHT * 2),
+                true,
+            )
+            // PNG preserves alpha — JPEG silently turns transparent box-art into BLACK.
+            legacyCoverFile(gameId).delete()
+            val out = customCoverFile(gameId)
+            FileOutputStream(out).use { scaled.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            File(thumbsDir, "$gameId.jpg").delete()
+            out.absolutePath
+        }.getOrNull()
     }
 
     fun resetCover(gameId: String) {
         customCoverFile(gameId).delete()
+        legacyCoverFile(gameId).delete()
         File(thumbsDir, "$gameId.jpg").delete()
     }
 

@@ -45,7 +45,7 @@ class GameDetailViewModel @Inject constructor(
 
     /** Suspends until the cover is persisted — callers must stay on screen until done. */
     suspend fun saveCustomCover(bitmap: android.graphics.Bitmap): Boolean = runCatching {
-        val path = coverManager.saveCustomCover(gameId, bitmap)
+        val path = coverManager.saveCustomCover(gameId, bitmap) ?: return@runCatching false
         val g = game.value?.game ?: return@runCatching false
         repo.updateGame(g.copy(customCoverPath = path))
         true

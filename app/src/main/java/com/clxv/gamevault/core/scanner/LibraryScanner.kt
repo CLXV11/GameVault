@@ -145,6 +145,7 @@ class LibraryScanner @Inject constructor(
     suspend fun addSingleFile(uri: Uri, title: String, platform: com.clxv.gamevault.core.model.Platform?): Boolean {
         val nm = queryDisplayName(uri) ?: uri.lastPathSegment ?: "file"
         if (nm.substringAfterLast('.', "").lowercase(java.util.Locale.US) in JUNK_EXTENSIONS) return false
+        return runCatching {
         withContext(Dispatchers.IO) {
             val name = queryDisplayName(uri) ?: uri.lastPathSegment ?: "file"
             var size = 0L; var mtime = 0L
@@ -188,8 +189,9 @@ class LibraryScanner @Inject constructor(
                 quickHash = hash,
             ))
         }
-        repo.organizeByPlatform()
-        return true
+        runCatching { repo.organizeByPlatform() }
+        true
+        }.getOrDefault(false)
     }
 
     /** Copies matching sidecar art into the game's private cover slot. */
@@ -201,9 +203,12 @@ class LibraryScanner @Inject constructor(
             val game = byNorm[base]
                 ?: games.firstOrNull { base.startsWith(it.normalizedTitle) || it.normalizedTitle.startsWith(base) }
                 ?: return@forEach
-            if (game.customCoverPath != null) return@forEach   // never overwrite user art
+            // Never overwrite user art — except legacy JPEGs, whose lost alpha
+            // turned transparent box-art black; the sidecar PNG restores it.
+            val staleJpeg = game.customCoverPath?.endsWith(".jpg") == true
+            if (game.customCoverPath != null && !staleJpeg) return@forEach
             val bmp = coverManager.decodeSampled(uri) ?: return@forEach
-            val path = coverManager.saveCustomCover(game.id, bmp)
+            val path = coverManager.saveCustomCover(game.id, bmp) ?: return@forEach
             db.gameDao().upsertGame(game.copy(customCoverPath = path))
         }
     }

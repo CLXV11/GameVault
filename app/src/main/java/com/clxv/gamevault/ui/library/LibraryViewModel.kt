@@ -97,7 +97,10 @@ class LibraryViewModel @Inject constructor(
             gyroTilt = c.s.gyroTilt,
             totalBytes = bytes,
             recent = recent,
-            platformsPresent = c.games.map { Platform.valueOf(it.platform) }.distinct().sortedBy { it.label },
+            platformsPresent = c.games
+                .map { g -> runCatching { Platform.valueOf(g.platform) }.getOrDefault(Platform.UNKNOWN) }
+                .distinct()
+                .sortedBy { it.label },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LibraryUiState())
 
