@@ -51,6 +51,12 @@ jobs:
         run: gradle-${{ env.GRADLE_VERSION }}/bin/gradle wrapper --gradle-version ${{ env.GRADLE_VERSION }}
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest --stacktrace
+      - name: Show compiler errors
+        if: failure()
+        run: |
+          echo "=========== ALL COMPILER ERRORS ==========="
+          grep -rhE "^e: " app/build 2>/dev/null | head -60 || true
+          echo "==========================================="
       - name: Show failing tests
         if: failure()
         run: |

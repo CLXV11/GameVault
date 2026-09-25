@@ -74,7 +74,10 @@ class LibraryViewModel @Inject constructor(
 
     val ui: StateFlow<LibraryUiState> = combine(
         core2, gameSizes, _selection, totalBytes,
-    ) { (c, counts, recent), sizes, selection, bytes ->
+    ) { t, sizes, selection, bytes ->
+        val c = t.first
+        val counts = t.second
+        val recent = t.third
         LibraryUiState(
             games = c.games
                 .filter { g -> c.s.showUnknown || g.platform != Platform.UNKNOWN.name }
