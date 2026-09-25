@@ -29,6 +29,7 @@ data class AppSettings(
     val themeColor: ThemeColor = ThemeColor.DEFAULT,
     val background: String = "none",   // "none" or an asset file name in backgrounds/
     val cover3d: Boolean = true,
+    val showNewBadge: Boolean = false,
 )
 
 @Singleton
@@ -47,6 +48,7 @@ class SettingsManager @Inject constructor(@ApplicationContext context: Context) 
         val THEME_COLOR = stringPreferencesKey("theme_color")
         val BACKGROUND = stringPreferencesKey("background")
         val COVER_3D = booleanPreferencesKey("cover_3d")
+        val SHOW_NEW = booleanPreferencesKey("show_new_badge")
     }
 
     val settings: Flow<AppSettings> = ds.data.map { p ->
@@ -61,6 +63,7 @@ class SettingsManager @Inject constructor(@ApplicationContext context: Context) 
             themeColor = runCatching { ThemeColor.valueOf(p[Keys.THEME_COLOR] ?: "DEFAULT") }.getOrDefault(ThemeColor.DEFAULT),
             background = p[Keys.BACKGROUND] ?: "none",
             cover3d = p[Keys.COVER_3D] ?: true,
+            showNewBadge = p[Keys.SHOW_NEW] ?: false,
         )
     }
 
@@ -74,4 +77,5 @@ class SettingsManager @Inject constructor(@ApplicationContext context: Context) 
     suspend fun setThemeColor(c: ThemeColor) = ds.edit { it[Keys.THEME_COLOR] = c.name }
     suspend fun setBackground(b: String) = ds.edit { it[Keys.BACKGROUND] = b }
     suspend fun setCover3d(b: Boolean) = ds.edit { it[Keys.COVER_3D] = b }
+    suspend fun setShowNewBadge(b: Boolean) = ds.edit { it[Keys.SHOW_NEW] = b }
 }

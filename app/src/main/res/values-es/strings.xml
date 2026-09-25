@@ -111,4 +111,5 @@
     <string name="export_library">Exportar biblioteca (JSON)</string>
     <string name="largest_files">Archivos más grandes</string>
     <string name="no_results">Sin resultados</string>
+    <string name="show_new_badge">Mostrar insignia NUEVO</string>
 </resources>

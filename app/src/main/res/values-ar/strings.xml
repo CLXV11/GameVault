@@ -111,4 +111,5 @@
     <string name="export_library">تصدير المكتبة (JSON)</string>
     <string name="largest_files">أكبر الملفات</string>
     <string name="no_results">لا نتائج مطابقة</string>
+    <string name="show_new_badge">إظهار شارة «جديد»</string>
 </resources>

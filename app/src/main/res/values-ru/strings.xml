@@ -111,4 +111,5 @@
     <string name="export_library">Экспорт библиотеки (JSON)</string>
     <string name="largest_files">Самые большие файлы</string>
     <string name="no_results">Нет совпадений</string>
+    <string name="show_new_badge">Показывать значок NEW</string>
 </resources>

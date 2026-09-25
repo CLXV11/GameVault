@@ -111,4 +111,5 @@
     <string name="export_library">Export library (JSON)</string>
     <string name="largest_files">Largest files</string>
     <string name="no_results">No matching games</string>
+    <string name="show_new_badge">Show NEW badge</string>
 </resources>

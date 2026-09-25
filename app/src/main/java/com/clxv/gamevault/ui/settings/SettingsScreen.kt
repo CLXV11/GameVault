@@ -199,6 +199,12 @@ fun SettingsScreen(
                     Switch(checked = state.settings.cover3d, onCheckedChange = { vm.setCover3d(it) })
                 }
             }
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.show_new_badge), modifier = Modifier.weight(1f))
+                    Switch(checked = state.settings.showNewBadge, onCheckedChange = { vm.setShowNewBadge(it) })
+                }
+            }
 
             item { SectionTitle(stringResource(R.string.theme_color)) }
             item {

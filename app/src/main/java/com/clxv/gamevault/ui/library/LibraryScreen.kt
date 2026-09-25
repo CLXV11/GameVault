@@ -358,7 +358,7 @@ private fun GridContent(
                 view = LibraryView.GRID,
                 cover3d = state.cover3d,
                 tiltEnabled = state.gyroTilt,
-                isNew = g.createdAt > System.currentTimeMillis() - 7L * 24 * 3600 * 1000,
+                isNew = state.showNewBadge && g.createdAt > System.currentTimeMillis() - 7L * 24 * 3600 * 1000,
                 onClick = { if (state.selection.isEmpty()) onOpenGame(g.id) else vm.toggleSelection(g.id) },
                 onLongClick = { vm.toggleSelection(g.id) },
             )
