@@ -9,43 +9,39 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * Premium 3D cover: front + spine, perspective tilt with spring settle,
- * soft shadow and a subtle reflection. No text is rendered on the spine,
- * reflection or back surfaces, so nothing ever appears mirrored.
+ * Cover presentation: NOTHING but the image. Transparent background, no spine,
+ * no shadow, no frame, no border. Optional drag tilt (3D) or perfectly flat (2D).
  */
 @Composable
 fun Cover3D(
@@ -60,15 +56,13 @@ fun Cover3D(
     val rotX = remember { Animatable(0f) }
     val spring: SpringSpec<Float> = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
 
-    val frontBitmap = remember(coverModel.customCoverPath) {
-        val p = coverModel.customCoverPath
-        if (p != null && File(p).exists()) BitmapFactory.decodeFile(p)?.asImageBitmap() else null
+    val frontBitmap by produceState<ImageBitmap?>(initialValue = null, coverModel.customCoverPath) {
+        value = withContext(Dispatchers.IO) { decodeCoverBitmap(coverModel.customCoverPath) }
     }
 
     val (c1, c2) = coverModel.placeholderColors
     val corner: Shape = MaterialTheme.shapes.medium
     val aspect = 3f / 4f
-    val spineW = width * 0.055f
 
     Box(
         modifier = modifier
@@ -77,91 +71,56 @@ fun Cover3D(
             .clipToBounds(),
         contentAlignment = Alignment.Center,
     ) {
-        // No frame, no shadow — the cover image floats directly on the wallpaper.
-
-        // Tilt body (spine + front), clipped to the cover bounds
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    rotationY = rotY.value
-                    rotationX = rotX.value
-                    cameraDistance = 14f * density
-                    transformOrigin = TransformOrigin(0.5f, 0.5f)
-                }
-                .pointerInput(enabled) {
-                    if (!enabled) return@pointerInput
-                    detectDragGestures(
-                        onDragEnd = {
-                            scope.launch { rotY.animateTo(0f, spring) }
-                            scope.launch { rotX.animateTo(0f, spring) }
-                            onTiltChange?.invoke(0f, 0f)
-                        },
-                        onDragCancel = {
-                            scope.launch { rotY.animateTo(0f, spring) }
-                            scope.launch { rotX.animateTo(0f, spring) }
-                        },
-                    ) { change, drag ->
-                        change.consume()
-                        scope.launch { rotY.snapTo((rotY.value + drag.x / 12f).coerceIn(-38f, 38f)) }
-                        scope.launch { rotX.snapTo((rotX.value - drag.y / 14f).coerceIn(-22f, 22f)) }
-                        onTiltChange?.invoke(rotY.value, rotX.value)
-                    }
-                },
-        ) {
-            // Spine — gradient only, no text
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .width(spineW)
-                    .fillMaxSize()
-                    .background(Brush.horizontalGradient(listOf(Color(c2), Color(c1)))),
-            )
-            // Front face
-            CoverFace(
-                bitmap = frontBitmap,
-                title = coverModel.title,
-                platformShort = coverModel.platformShort,
-                c1 = Color(c1), c2 = Color(c2), shape = corner,
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .width(width - spineW)
-                    .fillMaxSize(),
-            )
-        }
-    }
-}
-
-@Composable
-private fun CoverFace(
-    bitmap: ImageBitmap?,
-    title: String,
-    platformShort: String,
-    c1: Color,
-    c2: Color,
-    shape: Shape,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .clip(shape)
-            .background(Brush.verticalGradient(listOf(c1, c2))),
-    ) {
-        if (bitmap != null) {
-            // Cover art only — no frame, nothing else
+        if (frontBitmap != null) {
+            // The cover art alone — transparent everywhere around it
             Image(
-                bitmap = bitmap, contentDescription = title,
+                bitmap = frontBitmap!!,
+                contentDescription = coverModel.title,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(corner)
+                    .graphicsLayer {
+                        rotationY = rotY.value
+                        rotationX = rotX.value
+                        cameraDistance = 14f * density
+                        transformOrigin = TransformOrigin(0.5f, 0.5f)
+                    }
+                    .pointerInput(enabled) {
+                        if (!enabled) return@pointerInput
+                        detectDragGestures(
+                            onDragEnd = {
+                                scope.launch { rotY.animateTo(0f, spring) }
+                                scope.launch { rotX.animateTo(0f, spring) }
+                                onTiltChange?.invoke(0f, 0f)
+                            },
+                            onDragCancel = {
+                                scope.launch { rotY.animateTo(0f, spring) }
+                                scope.launch { rotX.animateTo(0f, spring) }
+                            },
+                        ) { change, drag ->
+                            change.consume()
+                            scope.launch { rotY.snapTo((rotY.value + drag.x / 12f).coerceIn(-38f, 38f)) }
+                            scope.launch { rotX.snapTo((rotX.value - drag.y / 14f).coerceIn(-22f, 22f)) }
+                            onTiltChange?.invoke(rotY.value, rotX.value)
+                        }
+                    },
             )
         } else {
-            // Clean "?" placeholder — gradient + glyph only
-            Text(
-                text = "?",
-                style = MaterialTheme.typography.displaySmall,
-                color = Color.White.copy(alpha = 0.30f),
-                modifier = Modifier.align(Alignment.Center),
-            )
+            // Minimal "?" placeholder: soft gradient + glyph, nothing else
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(corner)
+                    .background(Brush.verticalGradient(listOf(Color(c1), Color(c2)))),
+            ) {
+                Text(
+                    text = "?",
+                    style = MaterialTheme.typography.displaySmall,
+                    color = Color.White.copy(alpha = 0.30f),
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            }
         }
     }
 }
@@ -172,3 +131,15 @@ data class CoverModel(
     val customCoverPath: String?,
     val placeholderColors: Pair<Long, Long>,
 )
+
+/** Sampled decode so full-size JPEGs never hit the main thread unscaled. */
+internal fun decodeCoverBitmap(path: String?, targetWidth: Int = 420): ImageBitmap? {
+    if (path == null || !File(path).exists()) return null
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeFile(path, bounds)
+    if (bounds.outWidth <= 0) return null
+    var sample = 1
+    while (bounds.outWidth / (sample * 2) > targetWidth) sample *= 2
+    val opts = BitmapFactory.Options().apply { inSampleSize = sample }
+    return BitmapFactory.decodeFile(path, opts)?.asImageBitmap()
+}

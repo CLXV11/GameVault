@@ -3,6 +3,7 @@ package com.clxv.gamevault.ui.library
 import androidx.compose.animation.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -33,7 +34,7 @@ import com.clxv.gamevault.ui.components.Cover3D
 import com.clxv.gamevault.ui.components.GameCard
 import com.clxv.gamevault.ui.components.PlatformIcon
 
-enum class SortMode { TITLE, PLATFORM, SIZE, DATE_ADDED }
+enum class SortMode { TITLE, PLATFORM, SIZE, DATE_ADDED, LAST_VIEWED }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class,
        androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
@@ -49,14 +50,16 @@ fun LibraryScreen(
     var sort by remember { mutableStateOf(SortMode.TITLE) }
     var showCollectionPicker by remember { mutableStateOf(false) }
     var showAddGame by remember { mutableStateOf(false) }
+    var showBatchIdentify by remember { mutableStateOf(false) }
 
     val sortedGames = remember(state.games, sort) {
         when (sort) {
             SortMode.TITLE -> state.games.sortedBy { it.normalizedTitle }
             SortMode.PLATFORM -> state.games.sortedWith(compareBy({ it.platform }, { it.normalizedTitle }))
-            SortMode.SIZE -> state.games   // size sort uses primary file size via detail; approximate by title here
-                .sortedBy { it.normalizedTitle }
+            SortMode.SIZE -> state.games
+                .sortedByDescending { state.gameSizes[it.id] ?: 0L }
             SortMode.DATE_ADDED -> state.games.sortedByDescending { it.createdAt }
+            SortMode.LAST_VIEWED -> state.games.sortedByDescending { it.lastPlayedAt ?: 0L }
         }
     }
 
@@ -82,7 +85,7 @@ fun LibraryScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
                 ),
             )
         },
@@ -103,6 +106,10 @@ fun LibraryScreen(
                 },
                 singleLine = true,
                 shape = RoundedCornerShape(28.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
+                ),
             )
 
             // Platform filter chips
@@ -126,13 +133,23 @@ fun LibraryScreen(
                     )
                 }
                 items(state.platformsPresent) { p ->
+                    val count = state.platformCounts[p.name] ?: 0
                     FilterChip(
                         selected = state.platformFilter == p,
                         onClick = { vm.onPlatformFilter(if (state.platformFilter == p) null else p) },
-                        label = { Text(p.short) },
+                        label = { Text(if (count > 0) "${p.short} · $count" else p.short) },
                         leadingIcon = { PlatformIcon(p, 16.dp) },
                     )
                 }
+            }
+
+            if (state.recent.isNotEmpty() && state.query.isBlank()) {
+                RecentRow(
+                    games = state.recent,
+                    cover3d = state.cover3d,
+                    coverModel = { vm.coverModel(it) },
+                    onOpen = onOpenGame,
+                )
             }
 
             Row(
@@ -141,7 +158,12 @@ fun LibraryScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    stringResource(R.string.games_count, sortedGames.size),
+                    stringResource(
+                        R.string.library_stats,
+                        sortedGames.size,
+                        sortedGames.map { it.platform }.distinct().size,
+                        com.clxv.gamevault.ui.components.formatBytes(state.totalBytes),
+                    ),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -160,11 +182,16 @@ fun LibraryScreen(
                                         SortMode.PLATFORM -> R.string.sort_platform
                                         SortMode.SIZE -> R.string.sort_size
                                         SortMode.DATE_ADDED -> R.string.sort_date
+                                        SortMode.LAST_VIEWED -> R.string.sort_last_viewed
                                     })) },
                                     onClick = { sort = m; sortMenu = false },
                                 )
                             }
                         }
+                    }
+                    // random pick
+                    IconButton(onClick = { vm.randomGameId()?.let(onOpenGame) }) {
+                        Icon(Icons.Outlined.Casino, stringResource(R.string.random_game))
                     }
                     // 3D / 2D cover mode
                     IconButton(onClick = { vm.setCover3d(!state.cover3d) }) {
@@ -199,7 +226,16 @@ fun LibraryScreen(
                     CircularProgressIndicator()
                 }
             } else if (sortedGames.isEmpty()) {
-                EmptyLibrary(onOpenSettings)
+                if (state.query.isNotBlank()) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            stringResource(R.string.no_results),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                } else {
+                    EmptyLibrary(onOpenSettings)
+                }
             } else when (state.view) {
                 LibraryView.GRID -> GridContent(sortedGames, state, onOpenGame, vm)
                 LibraryView.LIST -> ListContent(sortedGames, state, onOpenGame, vm)
@@ -210,22 +246,37 @@ fun LibraryScreen(
         // Batch selection bar
         if (state.selection.isNotEmpty()) {
             Surface(
-                color = MaterialTheme.colorScheme.primaryContainer,
-                tonalElevation = 6.dp,
-                modifier = Modifier.fillMaxWidth().padding(padding).align(Alignment.BottomCenter),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.97f),
+                tonalElevation = 8.dp,
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                shadowElevation = 12.dp,
+                modifier = Modifier
+                    .padding(bottom = padding.calculateBottomPadding())
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter),
             ) {
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    Text(stringResource(R.string.selected_count, state.selection.size),
-                        style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = RoundedCornerShape(12.dp),
+                    ) {
+                        Text(stringResource(R.string.selected_count, state.selection.size),
+                            style = MaterialTheme.typography.titleSmall,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp))
+                    }
+                    Spacer(Modifier.weight(1f))
                     IconButton(onClick = { vm.toggleFavorite(state.selection.toList()) }) {
                         Icon(Icons.Outlined.FavoriteBorder, stringResource(R.string.favorites))
                     }
                     IconButton(onClick = { showCollectionPicker = true }) {
                         Icon(Icons.Outlined.PlaylistAdd, stringResource(R.string.add_to_collection))
+                    }
+                    IconButton(onClick = { showBatchIdentify = true }) {
+                        Icon(Icons.Outlined.Category, stringResource(R.string.identify))
                     }
                     IconButton(onClick = { vm.hide(state.selection.toList()) }) {
                         Icon(Icons.Outlined.VisibilityOff, stringResource(R.string.hide))
@@ -243,6 +294,14 @@ fun LibraryScreen(
     }
 
     // Collection picker for batch add
+    if (showBatchIdentify) {
+        com.clxv.gamevault.ui.detail.IdentifyGameDialog(
+            current = null,
+            onDismiss = { showBatchIdentify = false },
+            onPick = { vm.identifyMany(state.selection.toList(), it); showBatchIdentify = false },
+        )
+    }
+
     if (showAddGame) {
         AddGameDialog(scanner = vm.scanner, onDismiss = { showAddGame = false })
     }
@@ -302,6 +361,8 @@ private fun GridContent(
                 selected = g.id in state.selection,
                 view = LibraryView.GRID,
                 cover3d = state.cover3d,
+                tiltEnabled = state.gyroTilt,
+                isNew = g.createdAt > System.currentTimeMillis() - 7L * 24 * 3600 * 1000,
                 onClick = { if (state.selection.isEmpty()) onOpenGame(g.id) else vm.toggleSelection(g.id) },
                 onLongClick = { vm.toggleSelection(g.id) },
             )
@@ -323,6 +384,7 @@ private fun ListContent(
                 selected = g.id in state.selection,
                 view = LibraryView.LIST,
                 cover3d = state.cover3d,
+                tiltEnabled = state.gyroTilt,
                 onClick = { if (state.selection.isEmpty()) onOpenGame(g.id) else vm.toggleSelection(g.id) },
                 onLongClick = { vm.toggleSelection(g.id) },
             )
@@ -356,6 +418,8 @@ private fun ShelfContent(
                             width = (130 * state.coverScale).dp,
                             selected = g.id in state.selection,
                             view = LibraryView.SHELF,
+                            cover3d = state.cover3d,
+                            tiltEnabled = state.gyroTilt,
                             onClick = { if (state.selection.isEmpty()) onOpenGame(g.id) else vm.toggleSelection(g.id) },
                             onLongClick = { vm.toggleSelection(g.id) },
                         )
@@ -388,8 +452,16 @@ private fun EmptyLibrary(onOpenSettings: () -> Unit) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(Icons.Outlined.SportsEsports, null, Modifier.size(72.dp),
-            tint = MaterialTheme.colorScheme.outline)
+        Box(
+            Modifier
+                .size(96.dp)
+                .clip(RoundedCornerShape(28.dp))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Outlined.SportsEsports, null, Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.primary)
+        }
         Spacer(Modifier.height(16.dp))
         Text(stringResource(R.string.empty_library_title), style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(8.dp))
@@ -403,3 +475,43 @@ private fun EmptyLibrary(onOpenSettings: () -> Unit) {
     }
 }
 
+
+/** Horizontal rail of recently viewed games. */
+@Composable
+private fun RecentRow(
+    games: List<com.clxv.gamevault.data.local.entity.GameEntity>,
+    cover3d: Boolean,
+    coverModel: (com.clxv.gamevault.data.local.entity.GameEntity) -> com.clxv.gamevault.ui.components.CoverModel,
+    onOpen: (String) -> Unit,
+) {
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+        Text(
+            stringResource(R.string.recent_viewed),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+        )
+        androidx.compose.foundation.lazy.LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            items(games, key = { "recent_" + it.id }) { g ->
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.width(76.dp).clickable { onOpen(g.id) },
+                ) {
+                    if (cover3d) com.clxv.gamevault.ui.components.Cover3D(
+                        coverModel = coverModel(g), width = 76.dp, enabled = false,
+                    ) else com.clxv.gamevault.ui.components.FlatCover(
+                        coverModel = coverModel(g), width = 76.dp,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        g.title, style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    }
+}

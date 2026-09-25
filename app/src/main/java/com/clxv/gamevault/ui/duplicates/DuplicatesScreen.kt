@@ -27,8 +27,16 @@ import javax.inject.Inject
 @HiltViewModel
 class DuplicatesViewModel @Inject constructor(private val repo: GameRepository) : ViewModel() {
     var groups by mutableStateOf<List<List<FileRecordEntity>>>(emptyList()); private set
+    var largest by mutableStateOf<List<Triple<FileRecordEntity, String, Long>>>(emptyList()); private set
     init { refresh() }
-    fun refresh() = viewModelScope.launch { groups = repo.duplicates() }
+    fun refresh() = viewModelScope.launch {
+        groups = repo.duplicates()
+        val titles = repo.allGamesSnapshot().associate { it.id to it.title }
+        largest = repo.allFilesSnapshot()
+            .sortedByDescending { it.size }
+            .take(10)
+            .map { Triple(it, titles[it.gameId] ?: "?", it.size) }
+    }
     fun remove(gameIds: List<String>) = viewModelScope.launch { repo.removeFromLibrary(gameIds); refresh() }
 }
 
@@ -40,6 +48,9 @@ fun DuplicatesScreen(onBack: () -> Unit, vm: DuplicatesViewModel = hiltViewModel
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.duplicates)) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                ),
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } },
             )
         },
@@ -53,6 +64,32 @@ fun DuplicatesScreen(onBack: () -> Unit, vm: DuplicatesViewModel = hiltViewModel
                 Modifier.padding(padding), contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                if (vm.largest.isNotEmpty()) {
+                    item {
+                        Text(
+                            stringResource(R.string.largest_files),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    items(vm.largest, key = { "large_" + it.first.id }) { (f, title, size) ->
+                        ElevatedCard(Modifier.fillMaxWidth()) {
+                            Row(
+                                Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(title, style = MaterialTheme.typography.titleSmall, maxLines = 1)
+                                    Text(f.fileName, style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                                }
+                                Text(formatBytes(size), style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                    item { Spacer(Modifier.height(8.dp)) }
+                }
                 items(vm.groups, key = { it.first().quickHash }) { group ->
                     ElevatedCard(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

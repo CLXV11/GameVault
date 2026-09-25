@@ -32,6 +32,9 @@ fun CollectionsScreen(onBack: () -> Unit, vm: CollectionsViewModel = hiltViewMod
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.collections)) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                ),
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } },
                 actions = { IconButton(onClick = { showCreate = true }) { Icon(Icons.Outlined.Add, null) } },
             )
@@ -54,6 +57,7 @@ fun CollectionsScreen(onBack: () -> Unit, vm: CollectionsViewModel = hiltViewMod
                             val plat = platformByShort(c.name)
                             ListItem(
                                 headlineContent = { Text(c.name) },
+                                supportingContent = { Text(stringResource(R.string.games_count, c.gameCount)) },
                                 leadingContent = { plat?.let { PlatformIcon(it, 30.dp) } },
                                 modifier = Modifier.fillMaxWidth().clickable { selectedId = c.id },
                                 trailingContent = {

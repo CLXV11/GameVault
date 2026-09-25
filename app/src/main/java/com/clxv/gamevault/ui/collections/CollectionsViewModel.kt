@@ -12,8 +12,8 @@ import javax.inject.Inject
 @HiltViewModel
 class CollectionsViewModel @Inject constructor(private val repo: GameRepository) : ViewModel() {
 
-    val collections: StateFlow<List<com.clxv.gamevault.data.local.entity.CollectionEntity>> =
-        repo.observeCollections()
+    val collections: StateFlow<List<com.clxv.gamevault.data.local.dao.CollectionWithCount>> =
+        repo.observeCollectionsWithCounts()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun observeCollection(id: String): Flow<CollectionWithGames?> = repo.observeCollection(id)

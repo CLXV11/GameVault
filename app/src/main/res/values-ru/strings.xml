@@ -64,7 +64,7 @@
     <string name="theme_dark">Тёмная</string>
     <string name="cover_size">Размер обложки</string>
     <string name="show_unknown">Показывать неизвестные файлы</string>
-    <string name="gyro_tilt">Наклон обложек по датчику</string>
+    <string name="gyro_tilt">Наклон обложек перетаскиванием</string>
     <string name="metadata_provider">Провайдер данных (необязательно)</string>
     <string name="metadata_provider_hint">По умолчанию выключен. Если включить, GameVault будет обращаться только к указанному вами адресу и хранить результаты локально. Любой результат можно исправить вручную. Встроенных сервисов нет.</string>
     <string name="enabled">Включено</string>
@@ -100,4 +100,15 @@
     <string name="auto_organize">Автосортировка по платформе</string>
     <string name="not_a_game_file">Это не похоже на игру — выберите сам файл игры (rvz, iso, wbfs…). Обложку положите рядом как "Игра.cover.png", и она подключится автоматически.</string>
     <string name="view_3d">3D-обложки</string>
+    <string name="support">Поддержка и контакты</string>
+    <string name="github">GitHub</string>
+    <string name="telegram">Telegram</string>
+    <string name="recent_viewed">Недавно просмотренные</string>
+    <string name="random_game">Случайная игра</string>
+    <string name="sort_last_viewed">Последние просмотры</string>
+    <string name="library_stats">%1$d игр · %2$d платформ · %3$s</string>
+    <string name="new_badge">NEW</string>
+    <string name="export_library">Экспорт библиотеки (JSON)</string>
+    <string name="largest_files">Самые большие файлы</string>
+    <string name="no_results">Нет совпадений</string>
 </resources>

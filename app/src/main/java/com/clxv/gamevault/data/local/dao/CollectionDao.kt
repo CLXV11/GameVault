@@ -19,6 +19,16 @@ interface CollectionDao {
     @Query("SELECT * FROM collections ORDER BY name COLLATE NOCASE")
     fun observeAll(): Flow<List<CollectionEntity>>
 
+    @Query("""
+        SELECT c.id AS id, c.name AS name, c.createdAt AS createdAt,
+               COUNT(cg.gameId) AS gameCount
+        FROM collections c
+        LEFT JOIN collection_games cg ON c.id = cg.collectionId
+        GROUP BY c.id
+        ORDER BY c.name COLLATE NOCASE
+    """)
+    fun observeAllWithCounts(): Flow<List<CollectionWithCount>>
+
     @Query("SELECT * FROM collections WHERE id = :id")
     suspend fun byId(id: String): CollectionEntity?
 
@@ -44,3 +54,11 @@ interface CollectionDao {
     @Query("SELECT collectionId FROM collection_games WHERE gameId = :gameId")
     fun collectionIdsFor(gameId: String): Flow<List<String>>
 }
+
+/** POJO for [CollectionDao.observeAllWithCounts]. */
+data class CollectionWithCount(
+    val id: String,
+    val name: String,
+    val createdAt: Long,
+    val gameCount: Int,
+)

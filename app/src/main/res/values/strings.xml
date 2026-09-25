@@ -64,7 +64,7 @@
     <string name="theme_dark">Dark</string>
     <string name="cover_size">Cover size</string>
     <string name="show_unknown">Show unknown files</string>
-    <string name="gyro_tilt">Tilt covers with sensor</string>
+    <string name="gyro_tilt">Drag to tilt covers</string>
     <string name="metadata_provider">Metadata provider (optional)</string>
     <string name="metadata_provider_hint">Disabled by default. If you enable it, GameVault will only contact the endpoint you configure below, and caches results locally. Every result can be overridden manually. No service is bundled.</string>
     <string name="enabled">Enabled</string>
@@ -100,4 +100,15 @@
     <string name="auto_organize">Auto-organize by platform</string>
     <string name="not_a_game_file">This file does not look like a game — pick the game file itself (rvz, iso, wbfs…), and name a cover image "GameName.cover.png" next to it to attach it automatically.</string>
     <string name="view_3d">3D covers</string>
+    <string name="support">Support &amp; contact</string>
+    <string name="github">GitHub</string>
+    <string name="telegram">Telegram</string>
+    <string name="recent_viewed">Recently viewed</string>
+    <string name="random_game">Random game</string>
+    <string name="sort_last_viewed">Last viewed</string>
+    <string name="library_stats">%1$d games · %2$d platforms · %3$s</string>
+    <string name="new_badge">NEW</string>
+    <string name="export_library">Export library (JSON)</string>
+    <string name="largest_files">Largest files</string>
+    <string name="no_results">No matching games</string>
 </resources>

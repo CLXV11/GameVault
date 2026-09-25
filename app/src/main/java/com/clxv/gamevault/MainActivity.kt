@@ -46,11 +46,14 @@ class MainActivity : ComponentActivity() {
                 val bg by produceState<androidx.compose.ui.graphics.ImageBitmap?>(
                     initialValue = null, bgName,
                 ) {
-                    value = if (bgName == "none") null else runCatching {
-                        assets.open("backgrounds/$bgName").use { input ->
-                            BitmapFactory.decodeStream(input)?.asImageBitmap()
+                    value = if (bgName == "none") null else
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            runCatching {
+                                assets.open("backgrounds/$bgName").use { input ->
+                                    BitmapFactory.decodeStream(input)?.asImageBitmap()
+                                }
+                            }.getOrNull()
                         }
-                    }.getOrNull()
                 }
 
                 Box(Modifier.fillMaxSize()) {

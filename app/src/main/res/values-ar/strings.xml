@@ -64,7 +64,7 @@
     <string name="theme_dark">داكن</string>
     <string name="cover_size">حجم الغلاف</string>
     <string name="show_unknown">إظهار الملفات غير المعروفة</string>
-    <string name="gyro_tilt">إمالة الأغلفة بالمستشعر</string>
+    <string name="gyro_tilt">إمالة الأغلفة بالسحب</string>
     <string name="metadata_provider">مزود البيانات (اختياري)</string>
     <string name="metadata_provider_hint">معطل افتراضيًا. عند التفعيل، يتصل التطبيق فقط بالعنوان الذي تحدده أدناه، ويخزّن النتائج محليًا. يمكنك تجاوز أي نتيجة يدويًا. لا يوجد أي خدمة مدمجة.</string>
     <string name="enabled">مفعّل</string>
@@ -100,4 +100,15 @@
     <string name="auto_organize">تنظيم تلقائي حسب الجهاز</string>
     <string name="not_a_game_file">هذا الملف لا يبدو لعبة — اختر ملف اللعبة نفسه (rvz، iso، wbfs…)، وسمِّ صورة الغلاف بجواره بصيغة "اسم اللعبة.cover.png" ليتم ربطها تلقائيًا.</string>
     <string name="view_3d">أغلفة ثلاثية الأبعاد</string>
+    <string name="support">الدعم والتواصل</string>
+    <string name="github">GitHub</string>
+    <string name="telegram">Telegram</string>
+    <string name="recent_viewed">شوهدت مؤخرًا</string>
+    <string name="random_game">لعبة عشوائية</string>
+    <string name="sort_last_viewed">آخر مشاهدة</string>
+    <string name="library_stats">%1$d لعبة · %2$d منصة · %3$s</string>
+    <string name="new_badge">جديد</string>
+    <string name="export_library">تصدير المكتبة (JSON)</string>
+    <string name="largest_files">أكبر الملفات</string>
+    <string name="no_results">لا نتائج مطابقة</string>
 </resources>

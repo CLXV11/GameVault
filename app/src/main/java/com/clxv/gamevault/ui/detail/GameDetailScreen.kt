@@ -2,6 +2,8 @@ package com.clxv.gamevault.ui.detail
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -52,6 +54,9 @@ fun GameDetailScreen(
         topBar = {
             TopAppBar(
                 title = { Text(g.game.title, maxLines = 1) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                ),
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } },
                 actions = {
                     IconButton(onClick = { vm.toggleFavorite() }) {
@@ -96,9 +101,13 @@ fun GameDetailScreen(
                 }
             }
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Scrollable row of tonal action buttons with icons (never clips in RTL)
+                Row(
+                    Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
                     // Open through the system chooser; GameVault never executes files itself.
-                    OutlinedButton(onClick = {
+                    FilledTonalButton(onClick = {
                         g.files.firstOrNull()?.let { f ->
                             runCatching {
                                 val intent = Intent(Intent.ACTION_VIEW).apply {
@@ -108,9 +117,21 @@ fun GameDetailScreen(
                                 context.startActivity(Intent.createChooser(intent, null))
                             }
                         }
-                    }) { Text(stringResource(R.string.open_file)) }
-                    OutlinedButton(onClick = { onEditCover(g.game.id) }) { Text(stringResource(R.string.edit_cover)) }
-                    OutlinedButton(onClick = { showIdentify = true }) { Text(stringResource(R.string.identify)) }
+                    }) {
+                        Icon(Icons.Outlined.Launch, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.open_file))
+                    }
+                    FilledTonalButton(onClick = { onEditCover(g.game.id) }) {
+                        Icon(Icons.Outlined.Image, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.edit_cover))
+                    }
+                    FilledTonalButton(onClick = { showIdentify = true }) {
+                        Icon(Icons.Outlined.Category, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.identify))
+                    }
                 }
             }
             item {

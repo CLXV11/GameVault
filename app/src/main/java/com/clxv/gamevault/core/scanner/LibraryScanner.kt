@@ -229,12 +229,7 @@ class LibraryScanner @Inject constructor(
             return ProcessResult.SKIPPED
         }
 
-        // Cue/bin pairing: .bin handled via its .cue; large multi-file games group by folder+title.
         val ext = name.substringAfterLast('.', "").lowercase(Locale.US)
-        if (ext == "bin") {
-            // Only treat loose .bin as game when no sibling .cue references it.
-            // (Directory scans pair them below via buildGamesFromFiles.)
-        }
 
         // Never create library entries from junk (wallpapers, scripts, docs...).
         if (ext in JUNK_EXTENSIONS) return ProcessResult.SKIPPED

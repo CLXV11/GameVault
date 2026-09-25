@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.remember
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -40,6 +41,8 @@ fun GameCard(
     selected: Boolean,
     view: com.clxv.gamevault.core.settings.LibraryView,
     cover3d: Boolean = true,
+    tiltEnabled: Boolean = true,
+    isNew: Boolean = false,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -53,7 +56,7 @@ fun GameCard(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Box {
-                    if (cover3d) Cover3D(coverModel = coverModel, width = width, enabled = !selected)
+                    if (cover3d) Cover3D(coverModel = coverModel, width = width, enabled = !selected && tiltEnabled)
                     else FlatCover(coverModel = coverModel, width = width)
                     if (game.favorite) {
                         Icon(
@@ -62,6 +65,20 @@ fun GameCard(
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(18.dp),
                         )
+                    }
+                    if (isNew) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = RoundedCornerShape(bottomEnd = 8.dp),
+                            modifier = Modifier.align(Alignment.TopStart),
+                        ) {
+                            Text(
+                                stringResource(R.string.new_badge),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            )
+                        }
                     }
                     if (selected) {
                         Surface(
@@ -153,41 +170,39 @@ fun formatDate(ts: Long?): String {
 }
 
 
-/** Flat 2D cover variant (no perspective), used when 3D mode is off. */
+/** Flat 2D cover variant (no perspective), used when 3D mode is off. Pure image. */
 @Composable
 fun FlatCover(
     coverModel: CoverModel,
     width: Dp,
     modifier: Modifier = Modifier,
 ) {
-    val frontBitmap = remember(coverModel.customCoverPath) {
-        val p = coverModel.customCoverPath
-        if (p != null && java.io.File(p).exists())
-            android.graphics.BitmapFactory.decodeFile(p)?.asImageBitmap() else null
+    val frontBitmap by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(
+        initialValue = null, coverModel.customCoverPath,
+    ) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            com.clxv.gamevault.ui.components.decodeCoverBitmap(coverModel.customCoverPath)
+        }
     }
     val (c1, c2) = coverModel.placeholderColors
-    Surface(
-        shape = MaterialTheme.shapes.medium,
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp,
-        color = Color.Transparent,
-        modifier = modifier.width(width),
+    Box(
+        modifier = modifier
+            .width(width)
+            .aspectRatio(3f / 4f)
+            .clip(MaterialTheme.shapes.medium),
     ) {
-        Box(
-            Modifier
-                .width(width)
-                .aspectRatio(3f / 4f)
-                .clip(MaterialTheme.shapes.medium)
-                .background(androidx.compose.ui.graphics.Brush.verticalGradient(
-                    listOf(composeColor(c1), composeColor(c2)))),
-        ) {
-            if (frontBitmap != null) {
-                Image(
-                    bitmap = frontBitmap, contentDescription = coverModel.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            } else {
+        if (frontBitmap != null) {
+            Image(
+                bitmap = frontBitmap!!, contentDescription = coverModel.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(Brush.verticalGradient(listOf(composeColor(c1), composeColor(c2)))),
+            ) {
                 Text(
                     "?", style = MaterialTheme.typography.headlineMedium,
                     color = Color.White.copy(alpha = 0.35f),

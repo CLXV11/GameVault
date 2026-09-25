@@ -23,6 +23,11 @@ data class LibraryUiState(
     val coverScale: Float = 1.0f,
     val showUnknown: Boolean = true,
     val cover3d: Boolean = true,
+    val platformCounts: Map<String, Int> = emptyMap(),
+    val gameSizes: Map<String, Long> = emptyMap(),
+    val gyroTilt: Boolean = true,
+    val totalBytes: Long = 0L,
+    val recent: List<GameEntity> = emptyList(),
     val selection: Set<String> = emptySet(),
     val loading: Boolean = true,
     val platformsPresent: List<Platform> = emptyList(),
@@ -54,11 +59,22 @@ class LibraryViewModel @Inject constructor(
         val s: com.clxv.gamevault.core.settings.AppSettings,
     )
 
+    private val platformCounts = repo.observePlatformCounts()
+    private val recentGames = repo.observeRecentGames()
+    private val totalBytes = repo.observeTotalBytes()
+    private val gameSizes = repo.observeGameSizes()
+
     private val core = combine(
         gamesFlow, query, platformFilter, favoritesOnly, settings.settings,
     ) { games, q, plat, favOnly, s -> Core(games, q, plat, favOnly, s) }
 
-    val ui: StateFlow<LibraryUiState> = combine(core, _selection) { c, selection ->
+    private val core2 = combine(core, platformCounts, recentGames) { c, counts, recent ->
+        Triple(c, counts, recent)
+    }
+
+    val ui: StateFlow<LibraryUiState> = combine(
+        core2, gameSizes, _selection, totalBytes,
+    ) { (c, counts, recent), sizes, selection, bytes ->
         LibraryUiState(
             games = c.games
                 .filter { g -> c.s.showUnknown || g.platform != Platform.UNKNOWN.name }
@@ -73,6 +89,11 @@ class LibraryViewModel @Inject constructor(
             cover3d = c.s.cover3d,
             selection = selection,
             loading = false,
+            platformCounts = counts.associate { it.platform to it.total },
+            gameSizes = sizes.associate { it.gameId to it.size },
+            gyroTilt = c.s.gyroTilt,
+            totalBytes = bytes,
+            recent = recent,
             platformsPresent = c.games.map { Platform.valueOf(it.platform) }.distinct().sortedBy { it.label },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LibraryUiState())
@@ -92,6 +113,14 @@ class LibraryViewModel @Inject constructor(
     fun addManualGame(uri: android.net.Uri, title: String, platform: Platform?) =
         viewModelScope.launch { scanner.addSingleFile(uri, title, platform) }
     fun setCover3d(b: Boolean) = viewModelScope.launch { settings.setCover3d(b) }
+    /** Batch manual identification for all selected games. */
+    fun identifyMany(ids: List<String>, platform: Platform) = viewModelScope.launch {
+        ids.forEach { repo.identifyManually(it, platform) }
+        clearSelection()
+    }
+
+    /** Pick a random visible game — returns its id for navigation. */
+    fun randomGameId(): String? = ui.value.games.randomOrNull()?.id
     fun removeFromLibrary(ids: List<String>) = viewModelScope.launch { repo.removeFromLibrary(ids); clearSelection() }
     fun addToCollection(collectionId: String, ids: List<String>) = viewModelScope.launch {
         repo.addToCollection(collectionId, ids)

@@ -53,6 +53,42 @@ class SettingsViewModel @Inject constructor(
     fun setBackground(b: String) = viewModelScope.launch { settingsManager.setBackground(b) }
     fun cleanUnknown() = viewModelScope.launch { db.gameDao().deleteUnknownGames() }
 
+    /** Builds a JSON backup of the whole library in the cache exports dir. */
+    suspend fun exportLibraryJson(context: android.content.Context): java.io.File? =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching {
+                val games = db.gameDao().allGamesSnapshot()
+                val files = db.gameDao().allFilesSnapshot()
+                val root = org.json.JSONObject()
+                root.put("app", "GameVault")
+                root.put("version", 1)
+                root.put("exportedAt", System.currentTimeMillis())
+                val ga = org.json.JSONArray()
+                games.forEach { g ->
+                    ga.put(org.json.JSONObject()
+                        .put("id", g.id).put("title", g.title)
+                        .put("platform", g.platform).put("region", g.region)
+                        .put("favorite", g.favorite).put("hidden", g.hidden)
+                        .put("notes", g.notes).put("customCoverPath", g.customCoverPath ?: "")
+                        .put("createdAt", g.createdAt))
+                }
+                root.put("games", ga)
+                val fa = org.json.JSONArray()
+                files.forEach { f ->
+                    fa.put(org.json.JSONObject()
+                        .put("gameId", f.gameId).put("uri", f.uri)
+                        .put("fileName", f.fileName).put("size", f.size)
+                        .put("format", f.format).put("status", f.status)
+                        .put("confidence", f.confidence.toDouble()))
+                }
+                root.put("files", fa)
+                val dir = java.io.File(context.cacheDir, "exports").apply { mkdirs() }
+                val out = java.io.File(dir, "gamevault_library.json")
+                out.writeText(root.toString(2))
+                out
+            }.getOrNull()
+        }
+
     fun addRoot(uri: android.net.Uri, displayName: String) = viewModelScope.launch {
         db.libraryRootDao().add(LibraryRootEntity(UUID.randomUUID().toString(), uri.toString(), displayName))
     }

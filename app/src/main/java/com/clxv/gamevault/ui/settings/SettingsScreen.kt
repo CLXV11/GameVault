@@ -59,6 +59,7 @@ fun SettingsScreen(
     var metaUrl by remember(state.settings.metadataProviderUrl) { mutableStateOf(state.settings.metadataProviderUrl) }
     var showHidden by remember { mutableStateOf(false) }
     var confirmClean by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     val backgrounds = listOf(
         "none" to stringResource(R.string.bg_none),
         "cloud_house.jpg" to "Cloud House",
@@ -90,6 +91,9 @@ fun SettingsScreen(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.settings)) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                ),
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } },
             )
         },
@@ -258,6 +262,34 @@ fun SettingsScreen(
                 TextButton(onClick = { vm.setMetadataUrl(metaUrl) }) { Text(stringResource(R.string.save)) }
             }
 
+            item { SectionTitle(stringResource(R.string.support)) }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilledTonalButton(onClick = {
+                        runCatching {
+                            context.startActivity(android.content.Intent(
+                                android.content.Intent.ACTION_VIEW,
+                                android.net.Uri.parse("https://github.com/CLXV11/GameVault")))
+                        }
+                    }) {
+                        Icon(Icons.Outlined.Code, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.github))
+                    }
+                    FilledTonalButton(onClick = {
+                        runCatching {
+                            context.startActivity(android.content.Intent(
+                                android.content.Intent.ACTION_VIEW,
+                                android.net.Uri.parse("https://t.me/EPCD11")))
+                        }
+                    }) {
+                        Icon(Icons.Outlined.Send, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.telegram))
+                    }
+                }
+            }
+
             item { SectionTitle(stringResource(R.string.storage_stats)) }
             item {
                 ElevatedCard(Modifier.fillMaxWidth()) {
@@ -278,6 +310,29 @@ fun SettingsScreen(
                     onClick = { confirmClean = true },
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(stringResource(R.string.clean_unknown)) }
+            }
+            item {
+                OutlinedButton(
+                    onClick = {
+                        scope.launch {
+                            val f = vm.exportLibraryJson(context)
+                            if (f != null) {
+                                runCatching {
+                                    val uri = androidx.core.content.FileProvider.getUriForFile(
+                                        context, context.packageName + ".fileprovider", f)
+                                    val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                        type = "application/json"
+                                        putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                                        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    context.startActivity(
+                                        android.content.Intent.createChooser(send, null))
+                                }
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(R.string.export_library)) }
             }
         }
     }
@@ -321,9 +376,21 @@ fun SettingsScreen(
 
 @Composable
 private fun SectionTitle(text: String) {
-    Text(text, style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(top = 12.dp))
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(top = 14.dp, bottom = 2.dp),
+    ) {
+        Box(
+            Modifier
+                .width(3.dp)
+                .height(16.dp)
+                .clip(MaterialTheme.shapes.small)
+                .background(MaterialTheme.colorScheme.primary),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(text, style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary)
+    }
 }
 
 
@@ -337,12 +404,15 @@ private fun WallpaperThumb(
 ) {
     val context = LocalContext.current
     val bmp by androidx.compose.runtime.produceState<android.graphics.Bitmap?>(initialValue = null, file) {
-        value = if (file == "none") null else runCatching {
-            context.assets.open("backgrounds/$file").use { input ->
-                val opts = android.graphics.BitmapFactory.Options().apply { inSampleSize = 4 }
-                android.graphics.BitmapFactory.decodeStream(input, null, opts)
+        value = if (file == "none") null else
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching {
+                    context.assets.open("backgrounds/$file").use { input ->
+                        val opts = android.graphics.BitmapFactory.Options().apply { inSampleSize = 8 }
+                        android.graphics.BitmapFactory.decodeStream(input, null, opts)
+                    }
+                }.getOrNull()
             }
-        }.getOrNull()
     }
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Surface(

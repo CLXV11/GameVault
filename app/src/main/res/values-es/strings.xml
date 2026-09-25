@@ -64,7 +64,7 @@
     <string name="theme_dark">Oscuro</string>
     <string name="cover_size">Tamaño de portada</string>
     <string name="show_unknown">Mostrar archivos desconocidos</string>
-    <string name="gyro_tilt">Inclinar portadas con el sensor</string>
+    <string name="gyro_tilt">Inclinar portadas arrastrando</string>
     <string name="metadata_provider">Proveedor de datos (opcional)</string>
     <string name="metadata_provider_hint">Desactivado por defecto. Si lo activas, GameVault solo contactará con el servicio que configures y guardará los resultados localmente. Todo resultado puede corregirse manualmente. No hay servicios integrados.</string>
     <string name="enabled">Activado</string>
@@ -100,4 +100,15 @@
     <string name="auto_organize">Organizar automáticamente por plataforma</string>
     <string name="not_a_game_file">Este archivo no parece un juego: elige el archivo del juego (rvz, iso, wbfs…). Pon la portada junto a él como "Juego.cover.png" para vincularla automáticamente.</string>
     <string name="view_3d">Carátulas 3D</string>
+    <string name="support">Soporte y contacto</string>
+    <string name="github">GitHub</string>
+    <string name="telegram">Telegram</string>
+    <string name="recent_viewed">Vistos recientemente</string>
+    <string name="random_game">Juego aleatorio</string>
+    <string name="sort_last_viewed">Vistos últimamente</string>
+    <string name="library_stats">%1$d juegos · %2$d plataformas · %3$s</string>
+    <string name="new_badge">NUEVO</string>
+    <string name="export_library">Exportar biblioteca (JSON)</string>
+    <string name="largest_files">Archivos más grandes</string>
+    <string name="no_results">Sin resultados</string>
 </resources>

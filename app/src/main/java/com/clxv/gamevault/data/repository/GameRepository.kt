@@ -22,6 +22,13 @@ class GameRepository @Inject constructor(private val db: AppDatabase) {
     fun search(query: String) = db.gameDao().search(query.trim())
     fun observeGame(id: String): Flow<GameEntity?> = db.gameDao().observeGame(id)
     fun observeGameWithFiles(id: String): Flow<GameWithFiles?> = db.gameDao().observeGameWithFiles(id)
+    fun observePlatformCounts() = db.gameDao().platformCounts()
+    fun observeGameSizes() = db.gameDao().gameSizes()
+    fun observeTotalBytes() = db.gameDao().observeTotalBytes()
+    suspend fun allFilesSnapshot() = db.gameDao().allFilesSnapshot()
+    suspend fun allGamesSnapshot() = db.gameDao().allGamesSnapshot()
+    fun observeRecentGames() = db.gameDao().recentGames()
+
     fun observeStats() = Triple(db.gameDao().observeGameCount(), db.gameDao().observeFileCount(), db.gameDao().observeTotalBytes())
 
     suspend fun updateGame(game: GameEntity) = db.gameDao().updateGame(game)
@@ -69,6 +76,7 @@ class GameRepository @Inject constructor(private val db: AppDatabase) {
 
     // ---------------- Collections ----------------
     fun observeCollections() = db.collectionDao().observeAll()
+    fun observeCollectionsWithCounts() = db.collectionDao().observeAllWithCounts()
     fun observeCollection(id: String) = db.collectionDao().observeWithGames(id)
     fun collectionIdsFor(gameId: String) = db.collectionDao().collectionIdsFor(gameId)
 

@@ -24,13 +24,8 @@ object DuplicateFinder {
         val md = MessageDigest.getInstance("SHA-256")
         md.update(size.toString().toByteArray())
         if (size <= SMALL_FILE_LIMIT) {
-            var off = 0L
-            while (off < size) {
-                val chunk = hasher.read(off, minOf(SAMPLE.toLong(), size - off).toInt()) ?: break
-                md.update(chunk)
-                off += chunk.size
-                if (chunk.isEmpty()) break
-            }
+            // Single bounded read — one SAF descriptor instead of one per MiB.
+            hasher.read(0, size.toInt())?.let { md.update(it) }
         } else {
             hasher.read(0, SAMPLE)?.let { md.update(it) }
             hasher.read(size - SAMPLE, SAMPLE)?.let { md.update(it) }

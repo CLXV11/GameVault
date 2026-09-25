@@ -106,6 +106,18 @@ interface GameDao {
     @Query("DELETE FROM files WHERE uri = :uri")
     suspend fun deleteFileByUri(uri: String)
 
+    /** Largest file size per game — powers the REAL "sort by size". */
+    @Query("SELECT gameId AS gameId, MAX(size) AS size FROM files GROUP BY gameId")
+    fun gameSizes(): Flow<List<GameSize>>
+
+    /** Live per-platform game counts for the filter chips. */
+    @Query("SELECT platform AS platform, COUNT(*) AS total FROM games WHERE hidden = 0 GROUP BY platform")
+    fun platformCounts(): Flow<List<PlatformCount>>
+
+    /** Recently viewed games (lastPlayedAt doubles as "last opened" metadata). */
+    @Query("SELECT * FROM games WHERE hidden = 0 AND lastPlayedAt IS NOT NULL ORDER BY lastPlayedAt DESC LIMIT 10")
+    fun recentGames(): Flow<List<GameEntity>>
+
     @Query("SELECT * FROM games")
     suspend fun allGamesSnapshot(): List<GameEntity>
 
@@ -118,3 +130,9 @@ interface GameDao {
         deleteGames(ids)
     }
 }
+
+/** POJO for [GameDao.platformCounts]. */
+data class PlatformCount(val platform: String, val total: Int)
+
+/** POJO for [GameDao.gameSizes]. */
+data class GameSize(val gameId: String, val size: Long)

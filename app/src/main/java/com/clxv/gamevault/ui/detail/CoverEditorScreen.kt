@@ -36,6 +36,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -119,6 +120,9 @@ fun CoverEditorScreen(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.edit_cover)) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                ),
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } },
                 actions = {
                     if (source != null) {
@@ -137,9 +141,11 @@ fun CoverEditorScreen(
                                 // Stay on screen until the cover is fully persisted —
                                 // leaving early used to cancel the save mid-flight.
                                 scope.launch {
-                                    vm.saveCustomCover(out)
+                                    // Fully finish (file write + DB update) before leaving;
+                                    // the button shows "…" and the screen stays put meanwhile.
+                                    val ok = runCatching { vm.saveCustomCover(out) }.getOrDefault(false)
                                     saving = false
-                                    onBack()
+                                    if (ok) onBack()
                                 }
                             },
                         ) { Text(if (saving) "…" else stringResource(R.string.save_cover)) }
