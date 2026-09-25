@@ -26,6 +26,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.clxv.gamevault.R
 import com.clxv.gamevault.core.model.Platform
 import com.clxv.gamevault.core.model.ScanStatus
 import com.clxv.gamevault.data.local.entity.GameEntity
